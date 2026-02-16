@@ -23,3 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.DS_Store
+node_modules
+.idea
+package-lock.json
+/build
+.vscode/
+.idea/
+vite.config.*s.*
