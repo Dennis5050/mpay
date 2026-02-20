@@ -9,6 +9,8 @@ import Login from './pages/login';
 import SendMoney from './pages/send-money';
 import Dashboard from './pages/dashboard';
 import Register from './pages/register';
+import AccountPage from "./pages/account";
+
 
 const Routes = () => {
   return (
@@ -24,6 +26,7 @@ const Routes = () => {
         <Route path="/send-money" element={<SendMoney />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/account" element={<AccountPage/>}/>
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>
