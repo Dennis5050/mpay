@@ -4,45 +4,58 @@ import Icon from '../../../components/AppIcon';
 const TrustIndicators = () => {
   const indicators = [
     {
+      id: 'security',
       icon: 'Shield',
-      text: 'Bank-level Security',
-      description: 'Your data is encrypted and protected'
+      title: 'Bank-level Security',
+      description: 'Your data is encrypted and protected with industry-grade security.'
     },
     {
+      id: 'pci',
       icon: 'Lock',
-      text: 'PCI DSS Compliant',
-      description: 'Meeting international security standards'
+      title: 'PCI DSS Compliant',
+      description: 'Built to meet international payment security standards.'
     },
     {
+      id: 'compliance',
       icon: 'CheckCircle2',
-      text: 'African Certified',
-      description: 'Compliant with local regulations'
+      title: 'African Certified',
+      description: 'Fully compliant with regional financial regulations.'
     }
   ];
 
   return (
-    <div className="mt-8 pt-8 border-t border-border">
+    <section
+      className="mt-8 pt-8 border-t border-border"
+      aria-label="Security and trust information"
+    >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {indicators?.map((indicator, index) => (
+        {indicators.map((item) => (
           <div
-            key={index}
-            className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+            key={item.id}
+            className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors duration-200"
           >
+            {/* Icon */}
             <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Icon name={indicator?.icon} size={20} color="var(--color-primary)" />
+              <Icon
+                name={item.icon}
+                size={20}
+                color="var(--color-primary)"
+              />
             </div>
+
+            {/* Content */}
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium text-foreground font-heading mb-1">
-                {indicator?.text}
+                {item.title}
               </h4>
-              <p className="text-xs text-muted-foreground font-caption line-clamp-2">
-                {indicator?.description}
+              <p className="text-xs text-muted-foreground font-caption leading-relaxed">
+                {item.description}
               </p>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 };
 

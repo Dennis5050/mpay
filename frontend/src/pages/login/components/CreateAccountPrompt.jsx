@@ -5,18 +5,29 @@ import Button from '../../../components/ui/Button';
 const CreateAccountPrompt = () => {
   const navigate = useNavigate();
 
+  const handleNavigate = () => {
+    navigate('/register', { replace: false });
+  };
+
   return (
-    <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/10">
-      <div className="text-center">
+    <div
+      className="mt-8 p-6 rounded-xl bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/10"
+      role="region"
+      aria-label="Create account prompt"
+    >
+      <div className="text-center max-w-md mx-auto">
         <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
           New to MPay Africa?
         </h3>
-        <p className="text-sm text-muted-foreground font-body mb-4">
-          Create an account to start sending money, receiving payments, and managing your finances across Africa
+
+        <p className="text-sm text-muted-foreground font-body mb-5 leading-relaxed">
+          Create an account to send money, receive payments, and manage your
+          finances securely across Africa.
         </p>
+
         <Button
           variant="outline"
-          onClick={() => navigate('/register')}
+          onClick={handleNavigate}
           iconName="UserPlus"
           iconPosition="left"
           className="mx-auto"

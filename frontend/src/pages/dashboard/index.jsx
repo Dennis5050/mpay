@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/AppIcon";
 import DashboardLayout from "../../layouts/DashboardLayout";
 
+// Component Imports
 import WelcomeBanner from "./components/WelcomeBanner";
 import WalletOverview from "./components/WalletOverview";
 import QuickActionButton from "./components/QuickActionButton";
@@ -14,231 +15,151 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Clock Update - strictly for display
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // ---------------------------
-  // Mock User Data
-  // ---------------------------
-  const userData = {
+  // --- Memoized User Context ---
+  const userData = useMemo(() => ({
     name: "Kwame Mensah",
     accountType: "Business Account",
     email: "kwame.mensah@mpay.africa",
     vendorId: "231",
-  };
+    isVerified: true,
+  }), []);
 
-  // ---------------------------
-  // Quick Actions
-  // ---------------------------
-  const quickActions = [
-    {
-      icon: "Send",
-      label: "Send Money",
-      description: "Transfer funds across Africa",
-      path: "/send-money",
-      variant: "default",
-    },
-    {
-      icon: "Wallet",
-      label: "Withdraw Funds",
-      description: "Withdraw to bank or mobile money",
-      path: "/withdraw-funds",
-      variant: "secondary",
-    },
-    {
-      icon: "Plus",
-      label: "Deposit Money",
-      description: "Add funds to your wallet",
-      path: "/dashboard",
-      variant: "accent",
-    },
-  ];
+  // --- Actions & Summary Data ---
+  const quickActions = useMemo(() => [
+    { icon: "Send", label: "Send Money", description: "Transfer funds across Africa", path: "/send-money", variant: "default" },
+    { icon: "Wallet", label: "Withdraw Funds", description: "To bank or mobile money", path: "/withdraw-funds", variant: "secondary" },
+    { icon: "Plus", label: "Deposit Money", description: "Add funds to your wallet", path: "/dashboard", variant: "accent" },
+  ], []);
 
-  // ---------------------------
-  // Mock Transactions
-  // ---------------------------
-  const recentTransactions = [
-    {
-      id: "TXN001",
-      recipientName: "Amara Okafor",
-      recipientAvatar:
-        "https://img.rocket.new/generatedImages/rocket_gen_img_110db5bcb-1763295258787.png",
-      type: "send",
-      amount: 2500,
-      currency: "KES",
-      description: "Payment for services",
-      status: "success",
-      timestamp: new Date(),
-    },
-    {
-      id: "TXN002",
-      recipientName: "Chidi Nwosu",
-      recipientAvatar:
-        "https://img.rocket.new/generatedImages/rocket_gen_img_10d17e2d1-1763293910418.png",
-      type: "receive",
-      amount: 5000,
-      currency: "KES",
-      description: "Client payment received",
-      status: "success",
-      timestamp: new Date(),
-    },
-  ];
+  const accountSummary = useMemo(() => [
+    { icon: "TrendingUp", label: "Monthly Volume", value: "KES 125,450", subValue: "Jan 2026", trend: 18, iconColor: "text-success" },
+    { icon: "Target", label: "Savings Goal", value: "KES 50,000", subValue: "70% achieved", iconColor: "text-accent" },
+    { icon: "Users", label: "Active Recipients", value: "24", subValue: "This month", trend: 8, iconColor: "text-primary" },
+  ], []);
 
-  // ---------------------------
-  // Account Summary
-  // ---------------------------
-  const accountSummary = [
-    {
-      icon: "TrendingUp",
-      label: "Monthly Volume",
-      value: "KES 125,450",
-      subValue: "January 2026",
-      trend: 18,
-      iconColor: "var(--color-success)",
-    },
-    {
-      icon: "Target",
-      label: "Savings Goal",
-      value: "KES 50,000",
-      subValue: "KES 35,000 achieved",
-      iconColor: "var(--color-accent)",
-    },
-    {
-      icon: "Users",
-      label: "Active Recipients",
-      value: "24",
-      subValue: "This month",
-      trend: 8,
-      iconColor: "var(--color-primary)",
-    },
-  ];
-
-  const formatDate = (date) => {
+  // Format utility
+  const formatDate = useCallback((date) => {
     return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
     });
-  };
+  }, []);
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-
-        {/* Welcome Banner */}
-        <WelcomeBanner user={userData} />
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-               {userData.name}
-            </h1>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-              <Icon name="Calendar" size={14} />
+      <div className="flex flex-col gap-y-10 pb-12">
+        
+        {/* --- Header Section --- */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Financial Overview</h1>
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Icon name="Calendar" size={16} className="text-primary/70" />
               {formatDate(currentTime)}
             </div>
           </div>
-
+          
           <button
             onClick={() => navigate("/transactions")}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border hover:shadow-md transition"
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all"
           >
             <Icon name="Receipt" size={18} />
-            View All Transactions
+            Transactions
           </button>
+        </header>
+
+        {/* --- Hero Grid: Welcome & Profile --- */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <section className="xl:col-span-8">
+            <WelcomeBanner user={userData} />
+          </section>
+          <aside className="xl:col-span-4">
+             <div className="h-full rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4 h-full">
+                   <div className="relative shrink-0">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Icon name="User" size={32} />
+                      </div>
+                      {userData.isVerified && (
+                        <div className="absolute -top-1 -right-1 bg-success text-white rounded-full p-1 border-4 border-card">
+                          <Icon name="Check" size={12} strokeWidth={4} />
+                        </div>
+                      )}
+                   </div>
+                   <div className="min-w-0">
+                      <h3 className="font-bold text-xl truncate">{userData.name}</h3>
+                      <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">{userData.accountType}</p>
+                   </div>
+                </div>
+             </div>
+          </aside>
         </div>
 
-        {/* Wallet + User Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
+        {/* --- Primary Financial Row --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight">Wallet Status</h2>
+            </div>
             <WalletOverview />
-          </div>
-
-          {/* User Card */}
-          <div className="card p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <Icon name="User" size={18} color="#fff" />
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-foreground">
-                  {userData.name}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {userData.accountType}
-                </p>
-              </div>
+          </section>
+          
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Icon name="Activity" size={22} className="text-primary" />
+              Key Insights
+            </h2>
+            <div className="grid grid-cols-1 gap-4">
+              {accountSummary.map((item, idx) => (
+                <AccountSummaryCard key={idx} {...item} />
+              ))}
             </div>
-
-            <div className="border-t pt-3 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Icon name="Mail" size={14} />
-                {userData.email}
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-success">
-                <Icon name="Shield" size={14} />
-                Account Verified
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
 
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions.map((action, index) => (
-              <QuickActionButton key={index} {...action} />
+        {/* --- Quick Actions Slider/Grid --- */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold tracking-tight">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quickActions.map((action, idx) => (
+              <QuickActionButton key={idx} {...action} />
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Charts Section (NEW) */}
-        <ChartsSection />
-
-        {/* Transactions + Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-          {/* Recent Transactions */}
-          <div className="lg:col-span-2 space-y-4">
+        {/* --- Analytics & Transactions Row --- */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+          <section className="xl:col-span-2 space-y-6">
+            <h2 className="text-xl font-bold tracking-tight">Revenue Analytics</h2>
+            <div className="p-4 bg-card border border-border rounded-2xl">
+              <ChartsSection />
+            </div>
+          </section>
+          
+          <section className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">
-                Recent Transactions
-              </h2>
-
-              <button
+              <h2 className="text-xl font-bold tracking-tight">Recent Activity</h2>
+              <button 
                 onClick={() => navigate("/transactions")}
-                className="text-primary text-sm font-medium"
+                className="text-sm font-bold text-primary hover:text-primary/80 transition-colors"
               >
-                View All →
+                View Details
               </button>
             </div>
-
-            {recentTransactions.map((tx) => (
-              <RecentTransactionCard key={tx.id} transaction={tx} />
-            ))}
-          </div>
-
-          {/* Account Summary */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">
-              Account Summary
-            </h2>
-
-            {accountSummary.map((item, index) => (
-              <AccountSummaryCard key={index} {...item} />
-            ))}
-          </div>
+            
+            <div className="space-y-3 bg-card/50 p-4 rounded-2xl border border-dashed border-border/60">
+              {/* Optional: Add a map here if you have transaction data */}
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Icon name="Inbox" size={40} className="text-muted-foreground/30 mb-2" />
+                <p className="text-sm text-muted-foreground">No recent transactions to display.</p>
+              </div>
+            </div>
+          </section>
         </div>
 
       </div>

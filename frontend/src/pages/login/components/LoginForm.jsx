@@ -1,64 +1,84 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Icon from '../../../components/AppIcon';
+import { useAuth } from '../../../hooks/useAuth';
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
   const [formData, setFormData] = useState({
     identifier: '',
     password: ''
   });
+
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const mockCredentials = {
-    personal: {
-      phone: '+254712345678',
-      email: 'john.doe@mpay.africa',
-      password: 'Personal@123'
-    },
-    business: {
-      phone: '+254798765432',
-      email: 'business@mpay.africa',
-      password: 'Business@456'
-    }
-  };
+  // ============================
+  // Autofill from Register (FIXED)
+  // Runs once only to avoid infinite loop
+  // ============================
+  useEffect(() => {
+    const email = location.state?.email;
 
+    if (email) {
+      setFormData(prev => ({
+        ...prev,
+        identifier: email
+      }));
+    }
+  }, []); // IMPORTANT: no location.state dependency
+
+  // ============================
+  // Load remembered user
+  // ============================
+  useEffect(() => {
+    const savedUser = localStorage.getItem('rememberedUser');
+    if (savedUser) {
+      setFormData(prev => ({
+        ...prev,
+        identifier: savedUser
+      }));
+      setRememberMe(true);
+    }
+  }, []);
+
+  // ============================
+  // Validation
+  // ============================
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData?.identifier?.trim()) {
-      newErrors.identifier = 'Phone number or email is required';
-    } else {
-      const isEmail = formData?.identifier?.includes('@');
-      const isPhone = /^\+?[0-9]{10,15}$/?.test(formData?.identifier?.replace(/\s/g, ''));
-      
-      if (!isEmail && !isPhone) {
-        newErrors.identifier = 'Please enter a valid phone number or email address';
-      }
+    if (!formData.identifier.trim()) {
+      newErrors.identifier = 'Email is required';
     }
 
-    if (!formData?.password) {
+    if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData?.password?.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors)?.length === 0;
+    return Object.keys(newErrors).length === 0;
   };
 
+  // ============================
+  // Input change
+  // ============================
   const handleInputChange = (e) => {
-    const { name, value } = e?.target;
+    const { name, value } = e.target;
+
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-    if (errors?.[name]) {
+
+    if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
@@ -66,112 +86,114 @@ const LoginForm = () => {
     }
   };
 
+  // ============================
+  // Submit
+  // ============================
   const handleSubmit = async (e) => {
-    e?.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    e.preventDefault();
+
+    if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
 
-    setTimeout(() => {
-      const identifier = formData?.identifier?.toLowerCase()?.trim();
-      const password = formData?.password;
+    try {
+      await login(formData.identifier, formData.password);
 
-      const isValidPersonal = 
-        (identifier === mockCredentials?.personal?.phone || 
-         identifier === mockCredentials?.personal?.email?.toLowerCase()) &&
-        password === mockCredentials?.personal?.password;
-
-      const isValidBusiness = 
-        (identifier === mockCredentials?.business?.phone || 
-         identifier === mockCredentials?.business?.email?.toLowerCase()) &&
-        password === mockCredentials?.business?.password;
-
-      if (isValidPersonal || isValidBusiness) {
-        const userType = isValidPersonal ? 'personal' : 'business';
-        const mockToken = `mpay_token_${Date.now()}_${userType}`;
-        
-        localStorage.setItem('authToken', mockToken);
-        localStorage.setItem('userType', userType);
-        
-        if (rememberMe) {
-          localStorage.setItem('rememberedUser', identifier);
-        }
-
-        setIsLoading(false);
-        navigate('/dashboard');
+      if (rememberMe) {
+        localStorage.setItem('rememberedUser', formData.identifier);
       } else {
-        setIsLoading(false);
+        localStorage.removeItem('rememberedUser');
+      }
+
+      // Navigate after successful login
+      navigate('/dashboard');
+
+    } catch (error) {
+      if (error.status === 401) {
+        setErrors({ submit: 'Invalid email or password' });
+      } else if (error.status === 422) {
+        setErrors(error.errors || { submit: 'Validation error' });
+      } else {
         setErrors({
-          submit: 'Invalid credentials. Please check your phone/email and password.'
+          submit: error.message || 'Login failed'
         });
       }
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // ============================
+  // UI
+  // ============================
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
       <Input
-        label="Phone Number or Email"
-        type="text"
+        label="Email"
+        type="email"
         name="identifier"
-        placeholder="+254712345678 or email@example.com"
-        value={formData?.identifier}
+        placeholder="email@example.com"
+        value={formData.identifier}
         onChange={handleInputChange}
-        error={errors?.identifier}
+        error={errors.identifier}
         required
         disabled={isLoading}
       />
+
       <div className="relative">
         <Input
           label="Password"
           type={showPassword ? 'text' : 'password'}
           name="password"
           placeholder="Enter your password"
-          value={formData?.password}
+          value={formData.password}
           onChange={handleInputChange}
-          error={errors?.password}
+          error={errors.password}
           required
           disabled={isLoading}
         />
+
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          className="absolute right-3 top-8 text-muted-foreground hover:text-foreground"
         >
           <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={20} />
         </button>
       </div>
+
+      {/* Remember Me */}
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={rememberMe}
-            onChange={(e) => setRememberMe(e?.target?.checked)}
-            className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="w-4 h-4"
             disabled={isLoading}
           />
-          <span className="text-sm text-foreground font-caption">Remember me</span>
+          <span className="text-sm">Remember me</span>
         </label>
 
         <button
           type="button"
           onClick={() => navigate('/forgot-password')}
-          className="text-sm text-primary hover:text-primary/80 font-caption font-medium transition-colors"
-          disabled={isLoading}
+          className="text-sm text-primary hover:underline"
         >
           Forgot Password?
         </button>
       </div>
-      {errors?.submit && (
-        <div className="p-4 rounded-lg bg-error/10 border border-error/20 flex items-start gap-3">
-          <Icon name="AlertCircle" size={20} color="var(--color-error)" className="flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-error font-body">{errors?.submit}</p>
+
+      {/* Submit Error */}
+      {errors.submit && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2">
+          <Icon name="AlertCircle" size={18} />
+          <p className="text-sm text-red-600">{errors.submit}</p>
         </div>
       )}
+
       <Button
         type="submit"
         variant="default"
@@ -179,7 +201,6 @@ const LoginForm = () => {
         loading={isLoading}
         iconName="LogIn"
         iconPosition="right"
-        className="mt-6"
       >
         {isLoading ? 'Signing In...' : 'Sign In'}
       </Button>

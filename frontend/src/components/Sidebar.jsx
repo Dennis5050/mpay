@@ -21,18 +21,18 @@ const Sidebar = ({ isCollapsed = false }) => {
       icon: 'User',
       tooltip: 'Manage profile and settings'
     },
-    {
-      label: 'Send Money',
-      path: '/send-money',
-      icon: 'Send',
-      tooltip: 'Transfer funds across Africa'
-    },
-    {
-      label: 'Withdraw',
-      path: '/withdraw-funds',
-      icon: 'Wallet',
-      tooltip: 'Withdraw to bank or mobile money'
-    },
+{
+  label: 'Deposit / Transfer',
+  path: '/send-money',
+  icon: 'ArrowRightLeft',
+  tooltip: 'Deposit to wallet or transfer funds across Africa'
+},
+{
+  label: 'Withdraw',
+  path: '/withdraw-funds',
+  icon: 'Wallet',
+  tooltip: 'Withdraw to bank or mobile money'
+},
     {
       label: 'Transactions',
       path: '/transactions',
