@@ -1,98 +1,249 @@
-// src/services/authService.js
+const API_BASE_URL = "https://api.mpay.africa/api";
 
-const TOKEN_KEY = "authToken";
-const USER_KEY = "user";
+/*
+|--------------------------------------------------------------------------
+| Helper: Get Auth Headers
+|--------------------------------------------------------------------------
+*/
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("mpay_token");
 
-// ==========================
-// DEV USER (no backend)
-// ==========================
-const DEV_USER = {
-  email: "test@mpay.africa",
-  password: "123456",
-  name: "Test User",
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  };
 };
 
-export const authService = {
-  // ==========================
-  // Login (DEV MODE)
-  // ==========================
-  login: async (email, password) => {
-    // simulate network delay
-    await new Promise((r) => setTimeout(r, 500));
+/*
+|--------------------------------------------------------------------------
+| Helper: Handle API Response
+|--------------------------------------------------------------------------
+*/
+const handleResponse = async (response) => {
+  const data = await response.json();
 
-    if (email === DEV_USER.email && password === DEV_USER.password) {
-      const user = {
-        email: DEV_USER.email,
-        name: DEV_USER.name,
-      };
+  if (!response.ok) {
+    throw new Error(data.message || "API request failed");
+  }
 
-      // Save session
-      localStorage.setItem(TOKEN_KEY, "dev-token");
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return data;
+};
 
-      // Default onboarding values (if not set)
-      if (!localStorage.getItem("pinSet")) {
-        localStorage.setItem("pinSet", "true");
-      }
+/*
+|--------------------------------------------------------------------------
+| Register
+|--------------------------------------------------------------------------
+*/
+export const register = async ({
+  account_type,
+  name,
+  email,
+  phone,
+  password,
+}) => {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      account_type,
+      name,
+      email,
+      phone,
+      password,
+    }),
+  });
 
-      if (!localStorage.getItem("kycStatus")) {
-        localStorage.setItem("kycStatus", "not_started");
-      }
+  return handleResponse(response);
+};
 
-      if (!localStorage.getItem("kycLevel")) {
-        localStorage.setItem("kycLevel", "0");
-      }
+/*
+|--------------------------------------------------------------------------
+| Verify Email OTP
+|--------------------------------------------------------------------------
+*/
+export const verifyEmailOTP = async (email, otp) => {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      otp,
+    }),
+  });
 
-      return user;
+  return handleResponse(response);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Login
+|--------------------------------------------------------------------------
+*/
+export const login = async (email, password) => {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+
+  const data = await handleResponse(response);
+
+  // Save auth data
+  localStorage.setItem("mpay_token", data.token);
+  localStorage.setItem("mpay_user", JSON.stringify(data.user));
+  localStorage.setItem("mpay_onboarding_step", data.onboarding_step);
+
+  return data;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Set Transaction PIN
+|--------------------------------------------------------------------------
+*/
+export const setTransactionPin = async (pin) => {
+  const response = await fetch(`${API_BASE_URL}/auth/set-pin`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ pin }),
+  });
+
+  return handleResponse(response);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Complete KYC
+|--------------------------------------------------------------------------
+*/
+export const completeKYC = async (form) => {
+  const token = localStorage.getItem("mpay_token");
+
+  const formData = new FormData();
+
+  formData.append("id_number", form.id_number);
+  formData.append("dob", form.dob);
+  formData.append("city", form.city);
+  formData.append("state", form.state);
+  formData.append("country", form.country);
+  formData.append("address_line", form.address_line);
+
+  if (form.idFront) formData.append("id_front", form.idFront);
+  if (form.idBack) formData.append("id_back", form.idBack);
+  if (form.selfie) formData.append("selfie", form.selfie);
+
+  const response = await fetch(`${API_BASE_URL}/auth/complete-kyc`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    body: formData,
+  });
+
+  return handleResponse(response);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Onboarding Status
+|--------------------------------------------------------------------------
+*/
+export const getOnboardingStatus = async () => {
+  const response = await fetch(`${API_BASE_URL}/auth/onboarding-status`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  return handleResponse(response);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard Summary
+|--------------------------------------------------------------------------
+*/
+export const getDashboardSummary = async () => {
+  const response = await fetch(
+    `${API_BASE_URL}/auth/dashboard/summary`,
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
     }
+  );
 
-    // simulate backend error
-    const error = new Error("Invalid email or password");
-    error.status = 401;
-    throw error;
-  },
+  return handleResponse(response);
+};
 
-  // ==========================
-  // Register (disabled for dev)
-  // ==========================
-  register: async () => {
-    throw new Error("Register disabled (no backend)");
-  },
+/*
+|--------------------------------------------------------------------------
+| Get Current User
+|--------------------------------------------------------------------------
+*/
+export const getCurrentUser = () => {
+  const user = localStorage.getItem("mpay_user");
 
-  // ==========================
-  // Logout
-  // ==========================
-  logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  },
+  return user ? JSON.parse(user) : null;
+};
 
-  // ==========================
-  // Get current user
-  // ==========================
-  getUser: () => {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
-  },
+/*
+|--------------------------------------------------------------------------
+| Get Token
+|--------------------------------------------------------------------------
+*/
+export const getToken = () => {
+  return localStorage.getItem("mpay_token");
+};
 
-  // ==========================
-  // Check auth
-  // ==========================
-  isAuthenticated: () => {
-    return !!localStorage.getItem(TOKEN_KEY);
-  },
+/*
+|--------------------------------------------------------------------------
+| Check Authentication
+|--------------------------------------------------------------------------
+*/
+export const isAuthenticated = () => {
+  return !!localStorage.getItem("mpay_token");
+};
 
-  // ==========================
-  // Onboarding Status (DEV)
-  // ==========================
-  getOnboardingStatus: async () => {
-    // simulate delay
-    await new Promise((r) => setTimeout(r, 200));
+/*
+|--------------------------------------------------------------------------
+| Logout
+|--------------------------------------------------------------------------
+*/
+export const logout = () => {
+  localStorage.removeItem("mpay_token");
+  localStorage.removeItem("mpay_user");
+  localStorage.removeItem("mpay_onboarding_step");
 
-    return {
-      hasPin: localStorage.getItem("pinSet") === "true",
-      kycStatus: localStorage.getItem("kycStatus") || "not_started",
-      kycLevel: Number(localStorage.getItem("kycLevel") || 0),
-    };
-  },
+  window.location.href = "/login";
+};
+/*
+countries
+*/
+export const getCountries = async () => {
+  const response = await fetch("https://api.mpay.africa/api/countries", {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch countries");
+  }
+
+  return data;
 };

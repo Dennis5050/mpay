@@ -1,12 +1,31 @@
-body {
-  margin: 0;
-  padding: 0;
-  font-family: Inter;
-}
+:root {
+  /* Core Brand Colors */
+  --color-primary: #A32638;           /* Equity Maroon */
+  --color-primary-foreground: #FFFFFF;
+  --color-primary-light: #C0394B;
+  
+  --color-secondary: #5C2D25;         /* Equity Deep Brown */
+  --color-secondary-foreground: #FFFFFF;
+  
+  --color-accent: #FFB612;            /* Equity Gold */
+  --color-accent-foreground: #5C2D25;
 
-* {
-  box-sizing: border-box;
-  line-height: normal;
-  font-family: inherit;
-  margin: unset;
+  /* UI Surface Colors */
+  --color-background: #F8F9FA;
+  --color-foreground: #1A1A1A;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1A1A1A;
+  --color-border: #E0E0E0;
+  --color-muted: #F1F1F1;
+  --color-muted-foreground: #666666;
+
+  /* Feedback Colors */
+  --color-success: #2E7D32;
+  --color-destructive: #D32F2F;
+
+  /* Radius - Equity uses slightly "sharper" but modern corners */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }

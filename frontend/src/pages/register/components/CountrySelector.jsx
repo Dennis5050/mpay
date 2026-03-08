@@ -1,36 +1,48 @@
-import React from 'react';
-import Select from '../../../components/ui/Select';
+import { useEffect, useState } from "react";
+import { getCountries } from "../../services/authService";
 
 const CountrySelector = ({ value, onChange, error }) => {
-  const africanCountries = [
-    { value: 'NG', label: 'Nigeria', description: 'NGN - Nigerian Naira' },
-    { value: 'KE', label: 'Kenya', description: 'KES - Kenyan Shilling' },
-    { value: 'GH', label: 'Ghana', description: 'GHS - Ghanaian Cedi' },
-    { value: 'ZA', label: 'South Africa', description: 'ZAR - South African Rand' },
-    { value: 'TZ', label: 'Tanzania', description: 'TZS - Tanzanian Shilling' },
-    { value: 'UG', label: 'Uganda', description: 'UGX - Ugandan Shilling' },
-    { value: 'RW', label: 'Rwanda', description: 'RWF - Rwandan Franc' },
-    { value: 'ET', label: 'Ethiopia', description: 'ETB - Ethiopian Birr' },
-    { value: 'EG', label: 'Egypt', description: 'EGP - Egyptian Pound' },
-    { value: 'MA', label: 'Morocco', description: 'MAD - Moroccan Dirham' },
-    { value: 'CI', label: 'Côte d\'Ivoire', description: 'XOF - West African CFA Franc' },
-    { value: 'SN', label: 'Senegal', description: 'XOF - West African CFA Franc' },
-    { value: 'CM', label: 'Cameroon', description: 'XAF - Central African CFA Franc' },
-    { value: 'ZM', label: 'Zambia', description: 'ZMW - Zambian Kwacha' },
-    { value: 'ZW', label: 'Zimbabwe', description: 'USD - US Dollar' }
-  ];
+  const [countries, setCountries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const data = await getCountries();
+
+        // Mapping to match your actual API response:
+        // country_code, country_name, currency, phone_prefix, flag_url
+        const formatted = data.map((country) => ({
+          value: country.country_code, // Changed from .code
+          label: `${country.country_name} (${country.phone_prefix})`, // Added prefix for UX
+          description: `Currency: ${country.currency}`, // API doesn't have currency_name, just currency
+          // If your Select component supports custom icons/images:
+          icon: country.flag_url 
+        }));
+
+        setCountries(formatted);
+      } catch (err) {
+        console.error("Countries fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCountries();
+  }, []);
 
   return (
     <Select
       label="Country"
       description="Select your country for localized services"
-      placeholder="Choose your country"
-      options={africanCountries}
+      placeholder={loading ? "Loading countries..." : "Choose your country"}
+      options={countries}
       value={value}
       onChange={onChange}
       error={error}
       required
       searchable
+      disabled={loading} // Good practice to disable while fetching
     />
   );
 };

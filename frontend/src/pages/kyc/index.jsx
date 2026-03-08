@@ -1,368 +1,280 @@
-import React, { useState, useEffect } from "react";
-import { MemoryRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { completeKYC } from "../../services/authService";
 import { 
   ShieldCheck, 
-  Lock, 
   ChevronRight, 
   ArrowLeft,
-  Info,
   Globe,
-  Quote,
   User,
   Calendar,
   FileText,
   Camera,
   CheckCircle2,
-  AlertCircle,
-  Clock,
   UploadCloud,
-  X
+  X,
+  MapPin,
+  Lock
 } from "lucide-react";
 
 /**
- * UI COMPONENTS
+ * REUSABLE UI COMPONENTS (Equity Polished Style)
  */
-
 const Input = ({ label, error, icon: Icon, ...props }) => (
   <div className="w-full space-y-1.5 text-left">
-    {label && <label className="text-sm font-semibold text-slate-700">{label}</label>}
+    {label && <label className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</label>}
     <div className="relative">
       {Icon && (
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600/40">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
           <Icon size={18} />
         </div>
       )}
       <input
-        className={`w-full rounded-xl border bg-white px-4 py-3 text-sm transition-all outline-none focus:ring-4 focus:ring-emerald-500/10
+        className={`w-full rounded-lg border bg-slate-50/50 px-4 py-3.5 text-sm font-semibold transition-all outline-none focus:bg-white focus:ring-4 focus:ring-[#A32A29]/5
           ${Icon ? 'pl-11' : ''}
-          ${error ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-emerald-600'}`}
+          ${error ? 'border-red-500' : 'border-slate-200 focus:border-[#A32A29]'}`}
         {...props}
       />
     </div>
-    {error && <p className="text-xs text-red-500 mt-1 font-medium">{error}</p>}
+    {error && <p className="text-xs text-red-600 mt-1 font-bold">{error}</p>}
   </div>
 );
 
 const Button = ({ children, loading, variant = 'primary', fullWidth, ...props }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98]";
+  const baseStyles = "inline-flex items-center justify-center rounded-lg px-6 py-4 text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
   const variants = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200",
-    outline: "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300",
-    secondary: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+    primary: "bg-[#A32A29] text-white hover:bg-[#8e2423] shadow-lg shadow-red-900/10",
+    outline: "border-2 border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
   };
-
   return (
     <button className={`${baseStyles} ${variants[variant]} ${fullWidth ? 'w-full' : ''}`} disabled={loading} {...props}>
-      {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : children}
+      {loading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : children}
     </button>
   );
 };
 
 const FileUpload = ({ label, description, value, onUpload, onClear, error }) => (
   <div className="space-y-2">
-    <label className="text-sm font-semibold text-slate-700">{label}</label>
+    <label className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</label>
     {!value ? (
       <div 
         onClick={() => onUpload()} 
-        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer hover:bg-emerald-50/50 hover:border-emerald-400
-          ${error ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50/30'}`}
+        className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer hover:bg-slate-50
+          ${error ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
       >
-        <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-emerald-600">
+        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
           <UploadCloud size={24} />
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold text-slate-900">Click to upload image</p>
-          <p className="text-xs text-slate-500 mt-1">{description}</p>
+          <p className="text-sm font-bold text-slate-900">Click to capture or upload</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">{description}</p>
         </div>
       </div>
     ) : (
-      <div className="relative border-2 border-emerald-500 bg-emerald-50 rounded-2xl p-4 flex items-center gap-4">
-        <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
+      <div className="relative border-2 border-[#A32A29] bg-red-50/30 rounded-xl p-4 flex items-center gap-4 animate-in zoom-in-95">
+        <div className="w-10 h-10 bg-[#A32A29] rounded-lg flex items-center justify-center text-white">
           <CheckCircle2 size={20} />
         </div>
         <div className="flex-1 overflow-hidden">
-          <p className="text-sm font-bold text-slate-900 truncate">Document_Captured.jpg</p>
-          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Ready for submission</p>
+          <p className="text-sm font-bold text-slate-900 truncate uppercase tracking-tight">Image_Captured.jpg</p>
+          <p className="text-[10px] text-[#A32A29] font-black uppercase tracking-widest">Ready for analysis</p>
         </div>
-        <button onClick={onClear} className="p-2 hover:bg-emerald-100 rounded-full text-slate-400 transition-colors">
+        <button onClick={onClear} className="p-2 hover:bg-red-100 rounded-full text-[#A32A29] transition-colors">
           <X size={18} />
         </button>
       </div>
     )}
-    {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
   </div>
 );
 
-const Stepper = ({ steps, current }) => (
-  <div className="flex items-center justify-between mb-12 w-full max-w-sm mx-auto">
-    {steps.map((step, idx) => (
-      <React.Fragment key={idx}>
-        <div className="flex flex-col items-center gap-2 group">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black transition-all
-            ${idx < current ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 
-              idx === current ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 ring-4 ring-emerald-500/10' : 
-              'bg-slate-100 text-slate-400'}`}>
-            {idx < current ? <CheckCircle2 size={18} /> : idx + 1}
-          </div>
-          <span className={`text-[10px] font-black uppercase tracking-widest
-            ${idx <= current ? 'text-emerald-600' : 'text-slate-400'}`}>
-            {step.split(" ")[0]}
-          </span>
-        </div>
-        {idx !== steps.length - 1 && (
-          <div className={`flex-1 h-0.5 mx-2 rounded-full transition-all duration-500
-            ${idx < current ? 'bg-emerald-600' : 'bg-slate-100'}`} />
-        )}
-      </React.Fragment>
-    ))}
-  </div>
-);
-
-/**
- * BRAND SIDEBAR
- */
-const BrandSidebar = ({ quote, author, role }) => (
-  <div className="hidden lg:flex lg:w-[40%] xl:w-[45%] bg-emerald-950 relative overflow-hidden flex-col p-16 justify-between border-l-8 border-emerald-900/30 shadow-2xl">
-    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
-    <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-400/5 blur-[80px] rounded-full -ml-20 -mb-20" />
-    
-    <div className="relative z-10 space-y-12 text-left">
-      <div className="flex items-center gap-3 text-emerald-400 opacity-50">
-        <ShieldCheck size={32} />
-        <div className="h-px w-12 bg-emerald-800" />
-        <Globe size={24} />
-      </div>
-      
-      <div className="space-y-8">
-        <Quote className="text-emerald-500/30" size={64} fill="currentColor" />
-        <h3 className="text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight">
-          {quote}
-        </h3>
-        
-        <div className="flex items-center gap-5 pt-4">
-          <div className="w-16 h-16 rounded-full border-4 border-emerald-500/20 p-1">
-            <div className="w-full h-full rounded-full bg-emerald-100 flex items-center justify-center text-emerald-900 font-bold text-xl uppercase">
-              {author.split(' ').map(n => n[0]).join('')}
-            </div>
-          </div>
-          <div>
-            <p className="text-white font-black text-lg">{author}</p>
-            <p className="text-emerald-400/60 font-bold uppercase tracking-widest text-xs">{role}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div className="relative z-10 pt-10 flex gap-6 opacity-30">
-      <div className="flex items-center gap-2 text-white text-[10px] font-bold uppercase tracking-widest font-black"><Lock size={12}/> BANK GRADE</div>
-      <div className="flex items-center gap-2 text-white text-[10px] font-bold uppercase tracking-widest font-black"><ShieldCheck size={12}/> DATA PROTECTION</div>
-    </div>
-  </div>
-);
-
-/**
- * KYC PENDING PAGE
- */
-const KYCPending = () => {
-  const navigate = useNavigate();
+const Stepper = ({ current }) => {
+  const steps = ["Details", "Documents", "Selfie", "Review"];
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-12 text-center border border-slate-100">
-        <div className="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse">
-          <Clock size={48} className="text-emerald-600" />
+    <div className="flex items-center justify-between mb-12 w-full max-w-md mx-auto">
+      {steps.map((s, idx) => (
+        <div key={idx} className={`flex items-center ${idx !== steps.length - 1 ? 'flex-1' : ''}`}>
+          <div className="flex flex-col items-center gap-2">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black transition-all duration-500
+              ${idx <= current ? 'bg-[#A32A29] text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>
+              {idx < current ? <CheckCircle2 size={16} /> : idx + 1}
+            </div>
+            <span className={`text-[9px] font-black uppercase tracking-tighter ${idx <= current ? 'text-[#A32A29]' : 'text-slate-400'}`}>
+              {s}
+            </span>
+          </div>
+          {idx !== steps.length - 1 && (
+            <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-700 ${idx < current ? 'bg-[#A32A29]' : 'bg-slate-100'}`} />
+          )}
         </div>
-        <h1 className="text-3xl font-black text-slate-900 mb-3">Verification Pending</h1>
-        <p className="text-slate-500 font-medium leading-relaxed mb-10">
-          We've received your documents. Our team usually reviews applications within <span className="text-emerald-600 font-bold">2-4 hours</span>.
-        </p>
-        <Button variant="primary" fullWidth onClick={() => navigate('/')}>
-          Return to Dashboard
-        </Button>
-      </div>
+      ))}
     </div>
   );
 };
 
 /**
- * MAIN KYC FLOW COMPONENT
+ * MAIN KYC PAGE
  */
-const KYCContent = () => {
+const KYCPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
-    fullName: "",
-    dob: "",
-    idNumber: "",
+    id_number: "12345678",
+    dob: "1995-06-12",
+    city: "Nairobi",
+    state: "Nairobi",
+    country: "KE",
+    address_line: "Westlands, Nairobi",
     idFront: null,
     idBack: null,
-    selfie: null,
+    selfie: null
   });
 
-  const steps = ["Personal Info", "Documents", "Selfie", "Review"];
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const updateForm = (data) => setForm((prev) => ({ ...prev, ...data }));
+  setLoading(true);
 
-  const validateStep = () => {
-    const newErrors = {};
-    if (step === 0) {
-      if (!form.fullName.trim()) newErrors.fullName = "Full name is required";
-      if (!form.dob) newErrors.dob = "Date of birth is required";
-      if (!form.idNumber) newErrors.idNumber = "ID number is required";
-    } else if (step === 1) {
-      if (!form.idFront) newErrors.idFront = "Front of ID is required";
-      if (!form.idBack) newErrors.idBack = "Back of ID is required";
-    } else if (step === 2) {
-      if (!form.selfie) newErrors.selfie = "Selfie is required";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  try {
+    await completeKYC(form);
 
-  const handleNext = () => {
-    if (validateStep()) setStep((s) => s + 1);
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    // Simulate API logic
-    await new Promise((r) => setTimeout(r, 2000));
-    
-    localStorage.setItem("kycStatus", "pending");
-    localStorage.setItem("kycData", JSON.stringify({
-      fullName: form.fullName,
-      idNumber: form.idNumber,
-      submittedAt: new Date().toISOString(),
-    }));
-
-    setLoading(false);
     navigate("/kyc/pending");
-  };
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-slate-900">
-      
-      <div className="flex-1 flex flex-col overflow-y-auto px-6 py-8 lg:px-16 xl:px-24">
-        {/* Branding Header */}
-        <div className="mb-12 flex justify-between items-center">
-          <div className="group cursor-pointer">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-black shadow-lg shadow-emerald-200">M</div>
-              <h1 className="text-xl font-black tracking-tight text-slate-900">MPay Africa</h1>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans selection:bg-[#A32A29] selection:text-white">
+      {/* FORM SECTION */}
+      <div className="flex-1 px-6 py-10 lg:px-20 flex flex-col overflow-y-auto">
+        
+        <div className="mb-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#A32A29] rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-red-900/20">M</div>
+            <div>
+               <h1 className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-none">MPay Africa</h1>
+               <p className="text-[10px] font-bold text-[#A32A29] uppercase tracking-[0.3em] mt-1">Identity Hub</p>
             </div>
-            <p className="text-emerald-600 text-[10px] font-bold uppercase tracking-[0.2em] ml-10">Verification</p>
           </div>
         </div>
 
-        <div className="max-w-xl w-full mx-auto lg:mx-0 flex-1 flex flex-col pb-12">
-          <header className="mb-10">
-            <h2 className="text-4xl font-black text-slate-900 tracking-tight">Identity Verification</h2>
-            <p className="text-slate-500 text-lg font-medium mt-3">
-              Secure your account by completing our KYC process.
+        <div className="max-w-xl w-full mx-auto lg:mx-0 flex-1">
+          <div className="mb-10">
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-3">Identity Verification</h2>
+            <p className="text-slate-500 text-sm font-semibold leading-relaxed">
+              To comply with financial regulations and secure your account, please complete the verification process.
             </p>
-          </header>
+          </div>
+          
+          <Stepper current={step} />
 
-          <Stepper steps={steps} current={step} />
-
-          <div className="flex-1 animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {step === 0 && (
-              <div className="space-y-6">
-                <Input label="Full Legal Name" icon={User} placeholder="As it appears on ID" value={form.fullName} onChange={(e) => updateForm({ fullName: e.target.value })} error={errors.fullName} />
-                <Input label="Date of Birth" type="date" icon={Calendar} value={form.dob} onChange={(e) => updateForm({ dob: e.target.value })} error={errors.dob} />
-                <Input label="National ID / Passport Number" icon={FileText} placeholder="Enter number" value={form.idNumber} onChange={(e) => updateForm({ idNumber: e.target.value })} error={errors.idNumber} />
-                <div className="pt-6">
-                  <Button fullWidth onClick={handleNext}>Continue <ChevronRight size={18} className="ml-2" /></Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Input label="National ID Number" value={form.id_number} onChange={(e) => setForm({...form, id_number: e.target.value})} icon={FileText} />
+                <Input label="Date of Birth" type="date" value={form.dob} onChange={(e) => setForm({...form, dob: e.target.value})} icon={Calendar} />
+                <div className="md:col-span-2">
+                  <Input label="Residential Address" value={form.address_line} onChange={(e) => setForm({...form, address_line: e.target.value})} icon={MapPin} />
+                </div>
+                <Input label="City" value={form.city} onChange={(e) => setForm({...form, city: e.target.value})} />
+                <Input label="Country Code" value={form.country} onChange={(e) => setForm({...form, country: e.target.value})} icon={Globe} />
+                <div className="md:col-span-2 pt-6">
+                  <Button fullWidth onClick={() => setStep(1)}>Continue <ChevronRight size={16} className="ml-2"/></Button>
                 </div>
               </div>
             )}
 
             {step === 1 && (
-              <div className="space-y-6">
-                <FileUpload label="ID Card (Front)" description="Ensure the photo is clear and readable" value={form.idFront} onUpload={() => updateForm({ idFront: true })} onClear={() => updateForm({ idFront: null })} error={errors.idFront} />
-                <FileUpload label="ID Card (Back)" description="Capture the full reverse side" value={form.idBack} onUpload={() => updateForm({ idBack: true })} onClear={() => updateForm({ idBack: null })} error={errors.idBack} />
-                <div className="pt-6 flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(0)}><ArrowLeft size={18} /></Button>
-                  <Button fullWidth onClick={handleNext}>Continue <ChevronRight size={18} className="ml-2" /></Button>
+              <div className="space-y-8">
+                <FileUpload label="Identification (Front)" description="Clear photo of the front side" onUpload={() => setForm({...form, idFront: true})} value={form.idFront} onClear={() => setForm({...form, idFront: null})} />
+                <FileUpload label="Identification (Back)" description="Clear photo of the reverse side" onUpload={() => setForm({...form, idBack: true})} value={form.idBack} onClear={() => setForm({...form, idBack: null})} />
+                <div className="flex gap-4 pt-4">
+                  <Button variant="outline" onClick={() => setStep(0)}><ArrowLeft size={18}/></Button>
+                  <Button fullWidth onClick={() => setStep(2)}>Next Step <ChevronRight size={16} className="ml-2"/></Button>
                 </div>
               </div>
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
-                <div className="bg-emerald-50/50 p-6 rounded-2xl border-2 border-emerald-100 flex items-center gap-4 mb-4">
-                  <Camera size={32} className="text-emerald-600" />
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 text-left">Face Verification</p>
-                    <p className="text-xs text-slate-500 mt-1 text-left">Look straight into the camera in a well-lit area.</p>
-                  </div>
+              <div className="space-y-8">
+                <div className="bg-slate-900 p-8 rounded-2xl flex flex-col items-center text-white relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#A32A29]/20 blur-3xl rounded-full" />
+                   <Camera size={48} className="text-[#A32A29] mb-4 relative z-10" />
+                   <p className="font-black uppercase tracking-widest text-xs relative z-10">Liveness Detection</p>
+                   <p className="text-slate-400 text-[11px] mt-2 relative z-10">Look directly at the camera in a bright room.</p>
                 </div>
-                <FileUpload label="Your Selfie" description="PNG, JPG allowed. Max 5MB" value={form.selfie} onUpload={() => updateForm({ selfie: true })} onClear={() => updateForm({ selfie: null })} error={errors.selfie} />
-                <div className="pt-6 flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft size={18} /></Button>
-                  <Button fullWidth onClick={handleNext}>Continue <ChevronRight size={18} className="ml-2" /></Button>
+                <FileUpload label="Your Selfie" description="Portrait photo with clear face" onUpload={() => setForm({...form, selfie: true})} value={form.selfie} onClear={() => setForm({...form, selfie: null})} />
+                <div className="flex gap-4 pt-4">
+                  <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft size={18}/></Button>
+                  <Button fullWidth onClick={() => setStep(3)}>Final Review <ChevronRight size={16} className="ml-2"/></Button>
                 </div>
               </div>
             )}
 
             {step === 3 && (
               <div className="space-y-6">
-                <div className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-100 space-y-4">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Info size={14} /> Review Summary</h4>
-                  <div className="grid grid-cols-2 gap-4 text-left">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</p>
-                      <p className="text-sm font-bold text-slate-900">{form.fullName}</p>
+                 <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
+                    <div className="flex items-center gap-2 mb-6">
+                       <ShieldCheck size={20} className="text-[#A32A29]" />
+                       <h4 className="text-xs font-black uppercase text-slate-900 tracking-widest">Verification Summary</h4>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID Number</p>
-                      <p className="text-sm font-bold text-slate-900">{form.idNumber}</p>
+                    <div className="grid grid-cols-2 gap-y-6 text-sm">
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400">ID Number</p>
+                        <p className="font-bold text-slate-900 mt-1">{form.id_number}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400">Location</p>
+                        <p className="font-bold text-slate-900 mt-1">{form.city}, {form.country}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-[10px] font-black uppercase text-slate-400">Address</p>
+                        <p className="font-bold text-slate-900 mt-1">{form.address_line}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1 p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
-                      <span className="text-[10px] font-bold text-emerald-800 uppercase">Documents Uploaded</span>
-                    </div>
-                    <div className="flex-1 p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
-                      <span className="text-[10px] font-bold text-emerald-800 uppercase">Selfie Verified</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="pt-6 flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(2)}><ArrowLeft size={18} /></Button>
-                  <Button fullWidth loading={loading} onClick={handleSubmit}>Submit for Verification</Button>
-                </div>
+                 </div>
+                 <div className="flex gap-4">
+                  <Button variant="outline" onClick={() => setStep(2)}><ArrowLeft size={18}/></Button>
+                  <Button fullWidth loading={loading} onClick={handleSubmit}>Submit for Approval</Button>
+                 </div>
               </div>
             )}
           </div>
         </div>
-
-        <p className="mt-auto pt-10 text-center text-slate-400 text-xs font-bold tracking-wide uppercase">
-          &copy; {new Date().getFullYear()} MPAY AFRICA LIMITED. SECURED BY ENCRYPTION.
+        
+        <p className="mt-auto pt-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center lg:text-left">
+          © {new Date().getFullYear()} MPay Africa Limited • Regulated Financial Institution
         </p>
       </div>
 
-      <BrandSidebar 
-        quote="Compliance is the cornerstone of global scale. Our verification process ensures every user is safe." 
-        author="Sarah Odhiambo" 
-        role="MPay Africa • Compliance Officer" 
-      />
+      {/* BRANDING SIDEBAR */}
+      <div className="hidden lg:flex lg:w-1/3 bg-slate-900 p-16 text-white flex-col justify-between relative overflow-hidden">
+         {/* Decorative elements */}
+         <div className="absolute top-0 right-0 w-64 h-64 bg-[#A32A29]/10 blur-[100px] rounded-full -mr-20 -mt-20" />
+         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#A32A29]/5 blur-[80px] rounded-full -ml-20 -mb-20" />
+
+         <div className="relative z-10">
+           <Lock size={40} className="text-[#A32A29] mb-10" />
+           <h3 className="text-4xl font-black mb-6 leading-tight tracking-tighter">Mpay-Africa <br/>Security.</h3>
+           <p className="text-slate-400 leading-relaxed font-medium text-lg">
+             We use end-to-end encryption to ensure your sensitive documents never fall into the wrong hands.
+           </p>
+         </div>
+
+         <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-3 opacity-50">
+               <div className="h-px w-8 bg-white"/>
+               <span className="text-[10px] font-black uppercase tracking-[0.4em]">Secure Session</span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-bold uppercase">SSL Encrypted • GDPR Compliant • PCI-DSS</p>
+         </div>
+      </div>
     </div>
   );
 };
 
-/**
- * MAIN APP COMPONENT
- */
-export default function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<KYCContent />} />
-        <Route path="/kyc/pending" element={<KYCPending />} />
-      </Routes>
-    </Router>
-  );
-}
+export default KYCPage;

@@ -1,13 +1,55 @@
 import React from "react";
+import Icon from "../../../components/AppIcon"; // Assuming you have an icon set
 
 const BusinessInfoCard = ({ user }) => {
   return (
-    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-      <h3 className="text-lg font-semibold">Business Information</h3>
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+      {/* Header Section */}
+      <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon name="Building" size={18} className="text-primary" />
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Business Details
+          </h3>
+        </div>
+        <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase">
+          Verified Entity
+        </span>
+      </div>
 
-      <p><strong>Business Name:</strong> {user.businessName}</p>
-      <p><strong>Business ID:</strong> {user.businessId}</p>
-      <p><strong>Country:</strong> {user.country}</p>
+      {/* Content Grid */}
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+          
+          {/* Business Name - Spans full width */}
+          <div className="md:col-span-2 space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Legal Business Name</label>
+            <p className="text-base font-semibold text-foreground leading-none">
+              {user.businessName}
+            </p>
+          </div>
+
+          {/* ID Number */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Registration ID</label>
+            <div className="flex items-center gap-2">
+              <code className="text-sm font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
+                {user.businessId}
+              </code>
+            </div>
+          </div>
+
+          {/* Country */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Jurisdiction</label>
+            <p className="text-sm font-medium flex items-center gap-1.5">
+              <Icon name="MapPin" size={14} className="text-muted-foreground" />
+              {user.country}
+            </p>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };

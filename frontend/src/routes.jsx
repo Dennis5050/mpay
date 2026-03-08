@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
+import { BrowserRouter, Routes as RouterRoutes, Route, Navigate } from "react-router-dom";
 
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
@@ -26,63 +26,73 @@ import KYCPending from "./pages/kyc/Pending";
 import AuthGuard from "./components/AuthGuard";
 import AppLayout from "./layouts/AppLayout";
 
-/* ========= NEW PLACEHOLDER PAGES =========
-Create simple components if they don't exist yet
-*/
-const Payments = () => <div>Payments Page</div>;
-const ApiTransactions = () => <div>API Transactions Page</div>;
-const Transfer = () => <div>Internal Transfer Page</div>;
-const Services = () => <div>Services Page</div>;
-const Docs = () => <div>Documentation Page</div>;
-const Support = () => <div>Support Page</div>;
+/**
+ * MPay Branded Placeholders 
+ * (Temporary UI for confirming navigation)
+ */
+const PlaceholderPage = ({ title }) => (
+  <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
+    <div className="w-16 h-16 bg-[#A32A29]/10 rounded-full flex items-center justify-center text-[#A32A29] mb-4 font-black">M</div>
+    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{title}</h2>
+    <p className="text-slate-500 mt-2 font-medium">This module is part of the MPay Africa Infrastructure.</p>
+  </div>
+);
+
+const Payments = () => <PlaceholderPage title="Payments & Billing" />;
+const ApiTransactions = () => <PlaceholderPage title="API Gateway" />;
+const Transfer = () => <PlaceholderPage title="Internal Transfer" />;
+const Services = () => <PlaceholderPage title="Merchant Services" />;
+const Docs = () => <PlaceholderPage title="Developer Docs" />;
+const Support = () => <PlaceholderPage title="Institutional Support" />;
 
 const Routes = () => {
   return (
-      <ErrorBoundary>
-        <ScrollToTop />
+    <ErrorBoundary>
+      <ScrollToTop />
 
-        <RouterRoutes>
+      <RouterRoutes>
+        {/* Public Routes */}
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/set-pin" element={<SetPin />} />
 
-          {/* Public */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/set-pin" element={<SetPin />} />
+        {/* TEMPORARY UNRESTRICTED LAYOUT 
+          I have commented out the <AuthGuard> so you can test all pages.
+          Uncomment the <AuthGuard> tags once you confirm the UI.
+        */}
+        <Route
+          element={
+            /* <AuthGuard> */ 
+              <AppLayout />
+            /* </AuthGuard> */
+          }
+        >
+          {/* Main Dashboard Pages */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/send-money" element={<SendMoney />} />
+          <Route path="/withdraw-funds" element={<WithdrawFunds />} />
 
-          {/* Protected Layout */}
-          <Route
-            element={
-              <AuthGuard>
-                <AppLayout />
-              </AuthGuard>
-            }
-          >
-            {/* Main */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/account" element={<AccountPage />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/send-money" element={<SendMoney />} />
-            <Route path="/withdraw-funds" element={<WithdrawFunds />} />
+          {/* KYC (Optional per Dashboard) */}
+          <Route path="/kyc" element={<KYC />} />
+          <Route path="/kyc/pending" element={<KYCPending />} />
 
-            {/* KYC */}
-            <Route path="/kyc" element={<KYC />} />
-            <Route path="/kyc/pending" element={<KYCPending />} />
+          {/* Sidebar Extra Pages */}
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/api-transactions" element={<ApiTransactions />} />
+          <Route path="/transfer" element={<Transfer />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/support" element={<Support />} />
+        </Route>
 
-            {/* Sidebar Extra Pages */}
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/api-transactions" element={<ApiTransactions />} />
-            <Route path="/transfer" element={<Transfer />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/docs" element={<Docs />} />
-            <Route path="/support" element={<Support />} />
-          </Route>
-
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-
-        </RouterRoutes>
-      </ErrorBoundary>
+        {/* 404 Fallback */}
+        <Route path="*" element={<NotFound />} />
+      </RouterRoutes>
+    </ErrorBoundary>
   );
 };
 

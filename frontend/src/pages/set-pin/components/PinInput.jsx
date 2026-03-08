@@ -1,30 +1,31 @@
 import React, { useRef, useEffect } from "react";
 
-const PinInput = ({ length = 4, value = "", onChange, disabled }) => {
+const PinInput = ({ length = 4, value = "", onChange, disabled, mask = true }) => {
   const inputsRef = useRef([]);
 
-  // Sync internal refs with external value if needed (e.g., on clear)
+  // Focus management: focus first empty input or the last input if full
   useEffect(() => {
-    if (value === "") {
-      inputsRef.current.forEach((input) => {
-        if (input) input.value = "";
-      });
-      inputsRef.current[0]?.focus();
+    const nextIndex = value.length < length ? value.length : length - 1;
+    if (inputsRef.current[nextIndex] && !disabled) {
+      // Small timeout ensures the DOM is ready if this is rendered inside a modal/animation
+      const timer = setTimeout(() => inputsRef.current[nextIndex].focus(), 50);
+      return () => clearTimeout(timer);
     }
-  }, [value]);
+  }, [disabled, length]);
 
   const handleChange = (index, e) => {
     const val = e.target.value.replace(/[^0-9]/g, "");
+    if (disabled) return;
+
     const newValue = value.split("");
-    
-    // Take only the last character typed
+    // We only care about the last character entered in this specific box
     const char = val.charAt(val.length - 1);
     newValue[index] = char;
     
-    const pinString = newValue.join("");
+    const pinString = newValue.join("").slice(0, length);
     onChange(pinString);
 
-    // Auto-focus next
+    // Auto-focus next box if we just entered a character
     if (char && index < length - 1) {
       inputsRef.current[index + 1].focus();
     }
@@ -33,17 +34,21 @@ const PinInput = ({ length = 4, value = "", onChange, disabled }) => {
   const handleKeyDown = (index, e) => {
     if (e.key === "Backspace") {
       if (!value[index] && index > 0) {
-        // If current is empty, move back and clear previous
+        // Current is empty, move back and clear the previous box
         const newValue = value.split("");
         newValue[index - 1] = "";
         onChange(newValue.join(""));
         inputsRef.current[index - 1].focus();
       } else {
-        // Clear current
+        // Clear current box
         const newValue = value.split("");
         newValue[index] = "";
         onChange(newValue.join(""));
       }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputsRef.current[index - 1].focus();
+    } else if (e.key === "ArrowRight" && index < length - 1) {
+      inputsRef.current[index + 1].focus();
     }
   };
 
@@ -53,39 +58,54 @@ const PinInput = ({ length = 4, value = "", onChange, disabled }) => {
     
     if (pasteData) {
       onChange(pasteData);
-      // Focus the appropriate input after paste
-      const nextIndex = Math.min(pasteData.length, length - 1);
-      inputsRef.current[nextIndex].focus();
+      // Focus the last input or the next empty one
+      const focusTarget = pasteData.length === length ? length - 1 : pasteData.length;
+      inputsRef.current[focusTarget].focus();
     }
   };
 
   return (
-    <div className="flex justify-center gap-4" onPaste={handlePaste}>
-      {Array.from({ length }).map((_, index) => (
-        <input
-          key={index}
-          ref={(el) => (inputsRef.current[index] = el)}
-          type="text" // Using text with inputMode for better mobile numeric keyboard
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="one-time-code"
-          maxLength={1}
-          value={value[index] || ""}
-          onChange={(e) => handleChange(index, e)}
-          onKeyDown={(e) => handleKeyDown(index, e)}
-          disabled={disabled}
-          className={`
-            w-14 h-16 text-center text-2xl font-bold 
-            border-2 rounded-2xl transition-all duration-200
-            ${disabled ? "bg-muted text-muted-foreground opacity-50" : "bg-card text-foreground"}
-            ${value[index] ? "border-primary" : "border-border"}
-            focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none
-            placeholder:text-muted-foreground/30
-          `}
-          placeholder="○"
-          style={{ WebkitTextSecurity: "disc" }} // This masks the text while allowing numeric keyboards
-        />
-      ))}
+    <div className="flex justify-center gap-3 md:gap-4" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, index) => {
+        const isActive = value.length === index;
+        const isFilled = value[index] !== undefined && value[index] !== "";
+
+        return (
+          <input
+            key={index}
+            ref={(el) => (inputsRef.current[index] = el)}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            maxLength={1}
+            value={value[index] || ""}
+            onChange={(e) => handleChange(index, e)}
+            onKeyDown={(e) => handleKeyDown(index, e)}
+            disabled={disabled}
+            placeholder={!isFilled ? "•" : ""}
+            className={`
+              w-14 h-16 md:w-16 md:h-20 text-center text-2xl font-bold 
+              rounded-2xl border-2 transition-all duration-150 outline-none
+              ${disabled 
+                ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed" 
+                : "bg-white dark:bg-zinc-800 text-slate-900 dark:text-white cursor-text"
+              }
+              ${isFilled 
+                ? "border-primary shadow-sm scale-105" 
+                : "border-slate-200 dark:border-zinc-700"
+              }
+              ${isActive && !disabled ? "border-primary ring-4 ring-primary/10 bg-primary/[0.02]" : ""}
+              placeholder:text-slate-300 dark:placeholder:text-zinc-600
+            `}
+            style={{ 
+              WebkitTextSecurity: mask ? "disc" : "none",
+              // Fixes a bug in some browsers where the dot isn't centered vertically
+              lineHeight: "0" 
+            }}
+          />
+        );
+      })}
     </div>
   );
 };
