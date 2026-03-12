@@ -1,31 +1,26 @@
 import WalletCard from "./WalletCard";
 
-const WalletOverview = () => {
+const WalletOverview = ({ wallets }) => {
+
   const serviceWallet = {
     title: "Service Wallet",
-    balance: 50000,
-    currency: "KES",
-    gradient: "from-slate-800 to-slate-600",
-    actions: [
-      { label: "Top Up", onClick: () => {} }
-    ]
+    balance: Number(wallets?.service_wallet?.balance || 0),
+    currency: wallets?.service_wallet?.currency || "KES",
   };
 
   const paymentsWallet = {
     title: "Payments Wallet",
-    balance: 9140,
-    currency: "KES",
-    gradient: "from-green-700 to-emerald-500",
-    actions: [
-      { label: "Deposit", onClick: () => {} },
-      { label: "Withdraw", onClick: () => {} }
-    ]
+    balance: Number(wallets?.payments_wallet?.balance || 0),
+    currency: wallets?.payments_wallet?.currency || "KES",
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-4">
+    <div className="grid md:grid-cols-2 gap-6">
+
       <WalletCard {...serviceWallet} />
+
       <WalletCard {...paymentsWallet} />
+
     </div>
   );
 };

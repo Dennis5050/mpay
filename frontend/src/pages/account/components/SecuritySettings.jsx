@@ -1,99 +1,149 @@
-import React from "react";
+import React, { useState } from "react";
 import Icon from "../../../components/AppIcon";
 import Button from "../../../components/ui/Button";
 
-const PaymentMethodList = ({ onEdit, onDelete }) => {
-  const methods = [
-    { id: 1, type: "bank", name: "Equity Bank", details: "•••• 4567", isDefault: true, verified: true },
-    { id: 2, type: "mobile", name: "M-Pesa", details: "+254 712 •••• 678", isDefault: false, verified: true }
-  ];
+import { changePassword } from "../../../services/userService";
+import { logout } from "../../../services/authService";
 
-  const getIcon = (type) => {
-    const icons = { bank: "Building2", mobile: "Smartphone" };
-    return icons[type] || "CreditCard";
+const SecuritySettings = () => {
+
+  const [form, setForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: ""
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+
+    if (form.new_password !== form.confirm_password) {
+      setMessage({ type: "error", text: "Passwords do not match" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await changePassword({
+        current_password: form.current_password,
+        new_password: form.new_password
+      });
+
+      setMessage({ type: "success", text: "Password updated successfully" });
+
+      setForm({
+        current_password: "",
+        new_password: "",
+        confirm_password: ""
+      });
+
+    } catch (error) {
+      setMessage({ type: "error", text: error.message || "Failed to update password" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogoutAll = () => {
+    logout();
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+
       {/* Header */}
-      <div className="p-6 flex items-center justify-between bg-muted/20 border-b border-border/50">
-        <div>
-          <h3 className="text-base font-bold text-foreground">Payment Methods</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Manage your payouts and billing</p>
-        </div>
-        <Button variant="outline" size="sm" className="h-9 font-bold text-xs uppercase tracking-tight">
-          <Icon name="Plus" size={14} className="mr-1.5" />
-          Add New
-        </Button>
+      <div className="p-6 border-b border-border flex items-center gap-2">
+        <Icon name="Shield" size={18} className="text-primary" />
+        <h3 className="font-bold text-foreground">Security Settings</h3>
       </div>
 
-      {/* List */}
-      <div className="p-4 space-y-3">
-        {methods.map((method) => (
-          <div
-            key={method.id}
-            className="group flex items-center justify-between p-4 bg-background border border-border rounded-xl transition-all duration-200 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5"
+      <div className="p-6 space-y-6">
+
+        {/* Password Change */}
+        <form onSubmit={handlePasswordChange} className="space-y-4">
+
+          <h4 className="text-sm font-bold text-muted-foreground uppercase">
+            Change Password
+          </h4>
+
+          <input
+            type="password"
+            name="current_password"
+            placeholder="Current Password"
+            value={form.current_password}
+            onChange={handleChange}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+            required
+          />
+
+          <input
+            type="password"
+            name="new_password"
+            placeholder="New Password"
+            value={form.new_password}
+            onChange={handleChange}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+            required
+          />
+
+          <input
+            type="password"
+            name="confirm_password"
+            placeholder="Confirm New Password"
+            value={form.confirm_password}
+            onChange={handleChange}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+            required
+          />
+
+          {message && (
+            <div
+              className={`text-sm ${
+                message.type === "error"
+                  ? "text-destructive"
+                  : "text-success"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <Button type="submit" disabled={loading}>
+            {loading ? "Updating..." : "Update Password"}
+          </Button>
+
+        </form>
+
+        {/* Divider */}
+        <div className="border-t border-border pt-6">
+
+          <h4 className="text-sm font-bold text-muted-foreground uppercase mb-3">
+            Sessions
+          </h4>
+
+          <Button
+            variant="destructive"
+            onClick={handleLogoutAll}
           >
-            <div className="flex items-center gap-4">
-              {/* Icon with refined background */}
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border border-primary/10 transition-transform group-hover:scale-105">
-                <Icon name={getIcon(method.type)} size={22} className="text-primary" />
-              </div>
+            <Icon name="LogOut" size={16} className="mr-2" />
+            Logout
+          </Button>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground tracking-tight">{method.name}</span>
-                  {method.isDefault && (
-                    <span className="bg-primary/10 text-primary text-[10px] font-black uppercase px-2 py-0.5 rounded-full tracking-tighter">
-                      Default
-                    </span>
-                  )}
-                </div>
-                
-                {/* Monospaced details for better readability */}
-                <p className="text-sm font-mono text-muted-foreground/80 mt-0.5">
-                  {method.details}
-                </p>
+        </div>
 
-                {method.verified && (
-                  <div className="flex items-center gap-1 mt-1.5 text-[10px] font-bold text-success uppercase tracking-wider">
-                    <Icon name="ShieldCheck" size={12} strokeWidth={3} />
-                    Verified
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions: Refined Ghost Style */}
-            <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={() => onEdit?.(method)}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                title="Edit Method"
-              >
-                <Icon name="Pencil" size={16} />
-              </button>
-              <button 
-                onClick={() => onDelete?.(method.id)}
-                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                title="Remove Method"
-              >
-                <Icon name="Trash2" size={16} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Footer Security Note */}
-      <div className="px-6 py-4 bg-muted/10 border-t border-border/50 flex items-center justify-center gap-2">
-        <Icon name="Lock" size={12} className="text-muted-foreground/60" />
-        <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
-          Secure 256-bit SSL Encryption
-        </span>
       </div>
     </div>
   );
 };
 
-export default PaymentMethodList;
+export default SecuritySettings;

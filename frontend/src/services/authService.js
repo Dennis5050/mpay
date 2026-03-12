@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://api.mpay.africa/api";
+import { API_BASE_URL } from "../config/api";
 
 /*
 |--------------------------------------------------------------------------
@@ -10,21 +10,26 @@ const getAuthHeaders = () => {
 
   return {
     "Content-Type": "application/json",
-    Accept: "application/json",
-    Authorization: `Bearer ${token}`,
+    "Accept": "application/json",
+    "Authorization": `Bearer ${token}`,
   };
 };
 
 /*
 |--------------------------------------------------------------------------
-| Helper: Handle API Response
+| Helper: Handle API Response (Enhanced Error Catching)
 |--------------------------------------------------------------------------
+| This handles 422 (Validation), 409 (Conflict), and 500 (Server) errors.
 */
 const handleResponse = async (response) => {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "API request failed");
+    // We create a custom error object to carry the server's specific error details
+    const error = new Error(data.message || "API request failed");
+    error.status = response.status;
+    error.data = data; // This contains the 'errors' object from the API
+    throw error;
   }
 
   return data;
@@ -32,29 +37,17 @@ const handleResponse = async (response) => {
 
 /*
 |--------------------------------------------------------------------------
-| Register
+| Register (Personal & Business)
 |--------------------------------------------------------------------------
 */
-export const register = async ({
-  account_type,
-  name,
-  email,
-  phone,
-  password,
-}) => {
+export const register = async (userData) => {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      "Accept": "application/json",
     },
-    body: JSON.stringify({
-      account_type,
-      name,
-      email,
-      phone,
-      password,
-    }),
+    body: JSON.stringify(userData),
   });
 
   return handleResponse(response);
@@ -70,12 +63,9 @@ export const verifyEmailOTP = async (email, otp) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      "Accept": "application/json",
     },
-    body: JSON.stringify({
-      email,
-      otp,
-    }),
+    body: JSON.stringify({ email, otp }),
   });
 
   return handleResponse(response);
@@ -91,12 +81,9 @@ export const login = async (email, password) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      "Accept": "application/json",
     },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
+    body: JSON.stringify({ email, password }),
   });
 
   const data = await handleResponse(response);
@@ -126,7 +113,9 @@ export const setTransactionPin = async (pin) => {
 
 /*
 |--------------------------------------------------------------------------
-| Complete KYC
+|/*
+|--------------------------------------------------------------------------
+| Complete KYC (Multipart/FormData)
 |--------------------------------------------------------------------------
 */
 export const completeKYC = async (form) => {
@@ -154,12 +143,16 @@ export const completeKYC = async (form) => {
     body: formData,
   });
 
-  return handleResponse(response);
+  if (!response.ok) {
+    throw new Error("KYC submission failed");
+  }
+
+  return response.json();
 };
 
 /*
 |--------------------------------------------------------------------------
-| Onboarding Status
+| Account & Onboarding Status
 |--------------------------------------------------------------------------
 */
 export const getOnboardingStatus = async () => {
@@ -171,79 +164,49 @@ export const getOnboardingStatus = async () => {
   return handleResponse(response);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Dashboard Summary
-|--------------------------------------------------------------------------
-*/
 export const getDashboardSummary = async () => {
-  const response = await fetch(
-    `${API_BASE_URL}/auth/dashboard/summary`,
-    {
-      method: "GET",
-      headers: getAuthHeaders(),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/auth/dashboard/summary`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
 
   return handleResponse(response);
 };
 
 /*
 |--------------------------------------------------------------------------
-| Get Current User
+| Auth State Helpers
 |--------------------------------------------------------------------------
 */
 export const getCurrentUser = () => {
   const user = localStorage.getItem("mpay_user");
-
   return user ? JSON.parse(user) : null;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Token
-|--------------------------------------------------------------------------
-*/
-export const getToken = () => {
-  return localStorage.getItem("mpay_token");
-};
+export const getToken = () => localStorage.getItem("mpay_token");
 
-/*
-|--------------------------------------------------------------------------
-| Check Authentication
-|--------------------------------------------------------------------------
-*/
-export const isAuthenticated = () => {
-  return !!localStorage.getItem("mpay_token");
-};
+export const isAuthenticated = () => !!localStorage.getItem("mpay_token");
 
-/*
-|--------------------------------------------------------------------------
-| Logout
-|--------------------------------------------------------------------------
-*/
 export const logout = () => {
   localStorage.removeItem("mpay_token");
   localStorage.removeItem("mpay_user");
   localStorage.removeItem("mpay_onboarding_step");
-
   window.location.href = "/login";
 };
+
 /*
-countries
+|--------------------------------------------------------------------------
+| Utility: Get Countries
+|--------------------------------------------------------------------------
 */
 export const getCountries = async () => {
-  const response = await fetch("https://api.mpay.africa/api/countries", {
-    headers: {
-      Accept: "application/json",
-    },
+  const response = await fetch(`${API_BASE_URL}/countries`, {
+    headers: { "Accept": "application/json" },
   });
-
-  const data = await response.json();
 
   if (!response.ok) {
     throw new Error("Failed to fetch countries");
   }
 
-  return data;
+  return response.json();
 };

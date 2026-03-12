@@ -4,12 +4,16 @@ import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
 import { BrowserRouter } from "react-router-dom";
-
+import { Provider } from 'react-redux';
+import { store } from "Redux/store";
 const container = document.getElementById("root");
 const root = createRoot(container);
 
 root.render(
     <BrowserRouter>
-    <App />
+    
+    <Provider store={store}>
+   <App />
+    </Provider>
     </BrowserRouter>
 );

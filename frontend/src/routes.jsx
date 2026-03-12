@@ -1,5 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes as RouterRoutes, Route, Navigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux"; 
+
+// Import Thunks from your Slices
+import { fetchMethods } from "./Redux/slices/paymentSlice";
+import { getDashboardSummary } from "./Redux/slices/authSlice";
 
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
@@ -19,8 +24,9 @@ import SendMoney from "./pages/send-money";
 import AccountPage from "./pages/account";
 
 // KYC
-import KYC from "./pages/kyc";
-import KYCPending from "./pages/kyc/Pending";
+import KYCPage from "./pages/kyc";
+import Pending from "./pages/kyc/Pending";
+import Verified from "./pages/kyc/Verified";
 
 // Layout & Guard
 import AuthGuard from "./components/AuthGuard";
@@ -28,7 +34,6 @@ import AppLayout from "./layouts/AppLayout";
 
 /**
  * MPay Branded Placeholders 
- * (Temporary UI for confirming navigation)
  */
 const PlaceholderPage = ({ title }) => (
   <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
@@ -46,27 +51,46 @@ const Docs = () => <PlaceholderPage title="Developer Docs" />;
 const Support = () => <PlaceholderPage title="Institutional Support" />;
 
 const Routes = () => {
+  const dispatch = useDispatch();
+  
+  // We grab the authentication status from the Redux store
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  /**
+   * GLOBAL INITIALIZATION
+   * When the app loads, if we have a token (or Redux says we are authenticated),
+   * we fire off all initial API calls to populate the global state.
+   */
+  useEffect(() => {
+    const token = localStorage.getItem("mpay_token");
+    
+    if (token || isAuthenticated) {
+      // 1. Fetch Payment Channels (Bank, Mobile Money, etc.)
+      dispatch(fetchMethods());
+      
+      // 2. Fetch Dashboard Statistics (Balances, Recent activity summary)
+      dispatch(getDashboardSummary());
+    }
+  }, [dispatch, isAuthenticated]);
+
   return (
     <ErrorBoundary>
       <ScrollToTop />
 
       <RouterRoutes>
-        {/* Public Routes */}
+        {/* --- Public Routes --- */}
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/set-pin" element={<SetPin />} />
 
-        {/* TEMPORARY UNRESTRICTED LAYOUT 
-          I have commented out the <AuthGuard> so you can test all pages.
-          Uncomment the <AuthGuard> tags once you confirm the UI.
-        */}
+        {/* --- Protected Layout --- */}
         <Route
           element={
-            /* <AuthGuard> */ 
+            <AuthGuard> 
               <AppLayout />
-            /* </AuthGuard> */
+            </AuthGuard>
           }
         >
           {/* Main Dashboard Pages */}
@@ -76,9 +100,10 @@ const Routes = () => {
           <Route path="/send-money" element={<SendMoney />} />
           <Route path="/withdraw-funds" element={<WithdrawFunds />} />
 
-          {/* KYC (Optional per Dashboard) */}
-          <Route path="/kyc" element={<KYC />} />
-          <Route path="/kyc/pending" element={<KYCPending />} />
+          {/* KYC */}
+          <Route path="/kyc" element={<KYCPage />} />
+          <Route path="/kyc/pending" element={<Pending />} />
+          <Route path="/kyc/verified" element={<Verified />} />
 
           {/* Sidebar Extra Pages */}
           <Route path="/payments" element={<Payments />} />

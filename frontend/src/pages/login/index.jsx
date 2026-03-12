@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { login } from "../../services/authService";
-
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { loginUser, clearAuthError } from "../../Redux/slices/authSlice";
 
 import { 
   ShieldCheck, 
@@ -16,9 +17,6 @@ import {
   Building2,
   Wallet 
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
-
 
 /**
  * UI COMPONENTS (Equity Bank Theme: Maroon, Gold, Slate)
@@ -103,20 +101,26 @@ const Checkbox = ({ label, ...props }) => (
 /**
  * MAIN LOGIN COMPONENT
  */
-export default function App() {
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+export default function Login() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  // Grab state from Redux
+  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+
+  const [localErrors, setLocalErrors] = useState({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false
   });
-  const navigate = useNavigate();
 
+  // Redirect if already authenticated
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) navigate('/dashboard');
-  }, [navigate]);
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validate = () => {
     const newErrors = {};
@@ -124,44 +128,33 @@ export default function App() {
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Invalid email format";
     if (!formData.password) newErrors.password = "Please enter your password";
 
-    setErrors(newErrors);
+    setLocalErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
-  if (!validate()) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
 
-  setLoading(true);
+    // Dispatch the Redux action
+    const resultAction = await dispatch(loginUser({ 
+      email: formData.email, 
+      password: formData.password 
+    }));
 
-  setTimeout(async () => {
-    try {
-      const data = await login(
-        formData.email,
-        formData.password
-      );
-
-      // redirect depending on onboarding
+    // Handle navigation on success
+    if (loginUser.fulfilled.match(resultAction)) {
+      const data = resultAction.payload;
       if (data.onboarding_step === 1) {
-       //navigate("/set-pin");
         navigate("/dashboard");
-      
       } else if (data.onboarding_step === 2) {
-      // navigate("/kyc");
-      navigate("/dashboard");
+        navigate("/dashboard");
       } else {
         navigate("/dashboard");
       }
-
-    } catch (err) {
-      setErrors({
-        auth: "Invalid credentials. Please try again.",
-      });
-    } finally {
-      setLoading(false);
     }
-  }, 1500);
-};
+  };
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#FDFDFD] font-sans text-slate-900">
       
@@ -203,8 +196,11 @@ const handleSubmit = (e) => {
               type="email"
               placeholder="mpay@gmail"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              error={errors.email}
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                if (error) dispatch(clearAuthError());
+              }}
+              error={localErrors.email}
             />
 
             <div className="space-y-1">
@@ -216,8 +212,11 @@ const handleSubmit = (e) => {
                 type="password"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                error={errors.password}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (error) dispatch(clearAuthError());
+                }}
+                error={localErrors.password}
               />
             </div>
 
@@ -240,7 +239,12 @@ const handleSubmit = (e) => {
               Log In to MPay <ChevronRight size={18} className="ml-2" />
             </Button>
 
-            {errors.auth && <p className="text-center text-sm font-bold text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{errors.auth}</p>}
+            {/* Global Error Display */}
+            {error && (
+              <p className="text-center text-sm font-bold text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                {error}
+              </p>
+            )}
           </form>
 
           <div className="mt-12 p-6 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-4">

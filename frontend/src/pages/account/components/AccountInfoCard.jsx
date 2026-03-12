@@ -2,58 +2,90 @@ import React from "react";
 import Icon from "../../../components/AppIcon";
 
 const AccountInfoCard = ({ user }) => {
+  if (!user) return null;
+
+  const accountType = user.account_type || user.accountType || "Personal";
+
+  const initials =
+    user?.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U";
+
   return (
-    <div className="group bg-card border border-border rounded-xl p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-      
-      {/* User Header */}
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+
+      {/* Profile Header */}
       <div className="flex items-center gap-4 mb-6">
+
+        {/* Avatar */}
         <div className="relative">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-inner">
-            <Icon name="User" size={26} color="#fff" />
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-secondary text-white flex items-center justify-center font-bold text-lg shadow-sm">
+            {initials}
           </div>
-          {/* Subtle Status Indicator */}
-          <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-2 border-card rounded-full"></span>
+
+          {/* Online Indicator */}
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
         </div>
 
-        <div className="flex-1">
-          <h3 className="font-bold text-lg text-foreground leading-tight tracking-tight">
+        {/* Name + Type */}
+        <div className="flex flex-col">
+          <h3 className="text-lg font-semibold text-slate-900 leading-tight">
             {user.name}
           </h3>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary/10 text-secondary-foreground border border-secondary/20 uppercase tracking-wider">
-            {user.accountType}
+
+          <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary uppercase tracking-wide">
+            {accountType} Account
           </span>
         </div>
+
       </div>
 
-      {/* Info Grid */}
-      <div className="space-y-4 pt-5 border-t border-border/60">
-        
-        {/* Contact Items */}
+      {/* Divider */}
+      <div className="border-t border-slate-200 pt-5 space-y-4">
+
         {[
           { icon: "Mail", value: user.email, label: "Email Address" },
           { icon: "Phone", value: user.phone, label: "Phone Number" },
-          { icon: "Globe", value: user.country, label: "Location" },
+          { icon: "Globe", value: user.country, label: "Country / Region" },
         ].map((item, idx) => (
-          <div key={idx} className="flex items-start gap-3 group/item cursor-default">
-            <div className="mt-0.5 text-muted-foreground group-hover/item:text-primary transition-colors">
+          <div key={idx} className="flex items-start gap-3">
+
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
               <Icon name={item.icon} size={16} />
             </div>
+
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 {item.label}
               </span>
-              <span className="text-sm font-medium text-foreground/90">
-                {item.value}
+
+              <span className="text-sm font-medium text-slate-900">
+                {item.value || "-"}
               </span>
             </div>
+
           </div>
         ))}
 
-        {/* Verification Badge */}
-        <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-success/5 rounded-lg border border-success/10 text-success">
-          <Icon name="ShieldCheck" size={16} />
-          <span className="text-xs font-semibold">Verified Identity</span>
+        {/* KYC Status */}
+        <div
+          className={`flex items-center gap-2 mt-4 px-3 py-2 rounded-lg border text-xs font-semibold
+          ${
+            user.kyc_status === "verified"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-amber-50 border-amber-200 text-amber-700"
+          }`}
+        >
+          <Icon name="ShieldCheck" size={15} />
+
+          {user.kyc_status === "verified"
+            ? "Identity Verified"
+            : "Verification Pending"}
         </div>
+
       </div>
     </div>
   );

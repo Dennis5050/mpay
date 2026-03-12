@@ -6,20 +6,50 @@ import {
   ShieldCheck, 
   Lock, 
   Mail, 
-  Phone, 
   ChevronRight, 
   ArrowLeft,
   Info,
   Globe,
-  Quote
+  Quote,
+  PartyPopper,
+  AlertCircle,
+  X
 } from "lucide-react";
 import { getCountries, register } from "../../services/authService";
 
 /**
- * UI COMPONENTS (Consolidated for single-file mandate)
+ * REUSABLE UI COMPONENTS
  */
 
-const Input = ({ label, error, icon: Icon, ...props }) => (
+const ErrorAlert = ({ message, onReset, onClose }) => (
+  <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300 relative">
+    <div className="flex items-start gap-3">
+      <div className="p-1 bg-red-100 rounded-full text-red-600">
+        <AlertCircle size={16} />
+      </div>
+      <div className="flex-1">
+        <h4 className="text-sm font-bold text-red-800">Registration Issue</h4>
+        <p className="text-xs text-red-700 mt-1 leading-relaxed">{message}</p>
+        {onReset && (
+          <button 
+            type="button"
+            onClick={onReset}
+            className="mt-3 text-xs font-black uppercase tracking-widest text-red-600 hover:text-red-800 transition-colors flex items-center gap-1"
+          >
+            <ArrowLeft size={12} /> Try a different email or account type
+          </button>
+        )}
+      </div>
+      {onClose && (
+        <button onClick={onClose} className="text-red-400 hover:text-red-600 transition-colors">
+          <X size={16} />
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const Input = ({ label, error, isErrorField, icon: Icon, ...props }) => (
   <div className="w-full space-y-1.5">
     {label && <label className="text-sm font-semibold text-[#5C2D25]">{label}</label>}
     <div className="relative">
@@ -31,7 +61,7 @@ const Input = ({ label, error, icon: Icon, ...props }) => (
       <input
         className={`w-full rounded-xl border bg-white px-4 py-3 text-sm transition-all outline-none focus:ring-4 focus:ring-[#A32638]/10
           ${Icon ? 'pl-11' : ''}
-          ${error ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-[#A32638]'}`}
+          ${(error || isErrorField) ? 'border-red-500 bg-red-50/30 focus:border-red-500' : 'border-slate-200 focus:border-[#A32638]'}`}
         {...props}
       />
     </div>
@@ -44,7 +74,6 @@ const Button = ({ children, loading, variant = 'primary', fullWidth, ...props })
   const variants = {
     primary: "bg-[#A32638] text-white hover:bg-[#8B1F2F] shadow-lg shadow-[#A32638]/20",
     outline: "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300",
-    ghost: "text-slate-600 hover:bg-slate-100"
   };
 
   return (
@@ -118,14 +147,15 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
-const PhoneInput = ({ countryCode, phoneNumber, onCountryCodeChange, onPhoneNumberChange, error, countries }) => (
+const PhoneInput = ({ countryCode, phoneNumber, onCountryCodeChange, onPhoneNumberChange, error, isErrorField, countries }) => (
   <div className="space-y-1.5">
     <label className="text-sm font-semibold text-slate-700">Phone Number</label>
     <div className="flex gap-2">
       <select 
         value={countryCode}
         onChange={(e) => onCountryCodeChange(e.target.value)}
-        className="w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#A32638]/10 focus:border-[#A32638]"
+        className={`w-28 rounded-xl border bg-white px-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#A32638]/10 focus:border-[#A32638] 
+          ${isErrorField ? 'border-red-500' : 'border-slate-200'}`}
       >
         {countries.map((c) => (
           <option key={c.country_code} value={c.phone_prefix}>
@@ -140,6 +170,7 @@ const PhoneInput = ({ countryCode, phoneNumber, onCountryCodeChange, onPhoneNumb
           value={phoneNumber} 
           onChange={(e) => onPhoneNumberChange(e.target.value)} 
           error={error}
+          isErrorField={isErrorField}
         />
       </div>
     </div>
@@ -150,7 +181,7 @@ const PhoneInput = ({ countryCode, phoneNumber, onCountryCodeChange, onPhoneNumb
  * MAIN APP COMPONENT
  */
 export default function App() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [countries, setCountries] = useState([]);
@@ -170,9 +201,7 @@ export default function App() {
     email: "",
     password: "",
     confirmPassword: "",
-    country: "",
     agreeTerms: false,
-    agreePrivacy: false,
   });
 
   useEffect(() => {
@@ -181,11 +210,7 @@ export default function App() {
         const data = await getCountries();
         setCountries(data);
         if (data.length > 0) {
-          setFormData(prev => ({ 
-            ...prev, 
-            country: data[0].country_code,
-            countryCode: data[0].phone_prefix 
-          }));
+          setFormData(prev => ({ ...prev, countryCode: data[0].phone_prefix }));
         }
       } catch (err) {
         console.error("Countries fetch failed:", err);
@@ -207,55 +232,56 @@ export default function App() {
     const newErrors = {};
     if (formData.userType === "personal") {
       if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
-    }
-    if (formData.userType === "business") {
+    } else {
       if (!formData.businessName.trim()) newErrors.businessName = "Business name is required";
       if (!formData.contactPerson.trim()) newErrors.contactPerson = "Contact person is required";
-      if (!formData.businessStreetNumber.trim()) newErrors.businessStreetNumber = "Street No. is required";
       if (!formData.businessAddress.trim()) newErrors.businessAddress = "Address is required";
-      if (!formData.businessCity.trim()) newErrors.businessCity = "City is required";
-      if (!formData.businessState.trim()) newErrors.businessState = "State is required";
-      if (!formData.businessWebsite.trim()) newErrors.businessWebsite = "Website is required";
     }
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone required";
-    if (!formData.email.trim()) newErrors.email = "Email required";
-    if (!formData.password) newErrors.password = "Password required";
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Mismatch";
-    if (!formData.country) newErrors.country = "Select country";
-    if (!formData.agreeTerms || !formData.agreePrivacy) newErrors.agreement = "Please accept policies";
+    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone is required";
+    if (!formData.email.trim() || !formData.email.includes("@")) newErrors.email = "Valid email required";
+    if (formData.password.length < 6) newErrors.password = "Min 6 characters";
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords mismatch";
+    if (!formData.agreeTerms) newErrors.agreement = "Please accept policies";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateStep2()) return;
-    setLoading(true);
-    try {
-      const payload = {
-        account_type: formData.userType,
-        name: formData.userType === "personal" ? formData.fullName : formData.businessName,
-        email: formData.email,
-        phone: `${formData.countryCode}${formData.phoneNumber}`,
-        password: formData.password,
-        country: formData.country,
-        ...(formData.userType === "business" && {
-          business_address: `${formData.businessStreetNumber} ${formData.businessAddress}`,
-          business_city: formData.businessCity,
-          business_state: formData.businessState,
-          business_website: formData.businessWebsite,
-          contact_person: formData.contactPerson
-        })
-      };
-      await register(payload);
-      alert("Registration Successful!");
-    } catch (err) {
-      setErrors({ api: err.message || "Registration failed" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!validateStep2()) return;
+
+  setLoading(true);
+
+  try {
+
+    const payload = {
+      account_type: formData.userType,
+      name: formData.userType === "personal"
+        ? formData.fullName
+        : formData.businessName,
+      email: formData.email,
+      phone: `${formData.countryCode}${formData.phoneNumber}`,
+      password: formData.password,
+      password_confirmation: formData.confirmPassword
+    };
+
+    await register(payload);
+
+    // move to success step
+    setStep(3);
+
+  } catch (err) {
+    console.error("Register error:", err);
+
+    setErrors({
+      api: err.message || "Registration failed"
+    });
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-slate-900">
@@ -263,7 +289,6 @@ export default function App() {
       {/* LEFT COLUMN: FORM AREA */}
       <div className="flex-1 flex flex-col overflow-y-auto px-6 py-8 lg:px-16 xl:px-24">
         
-        {/* Progress Header Section - Adapted to Theme */}
         <div className="mb-12">
           <div className="flex justify-between items-start mb-8">
             <div className="group cursor-pointer">
@@ -273,25 +298,26 @@ export default function App() {
               </div>
               <p className="text-[#A32638] text-[10px] font-bold uppercase tracking-[0.2em] ml-10">Global Payments</p>
             </div>
-            <div className="flex gap-2.5 pt-2">
-              <div className={`h-2.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-[#A32638] shadow-md shadow-[#A32638]/10' : 'bg-slate-100'}`} />
-              <div className={`h-2.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-[#A32638] shadow-md shadow-[#A32638]/10' : 'bg-slate-100'}`} />
-            </div>
+            {step < 3 && (
+              <div className="flex gap-2.5 pt-2">
+                <div className={`h-2.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-[#A32638]' : 'bg-slate-100'}`} />
+                <div className={`h-2.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-[#A32638]' : 'bg-slate-100'}`} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
             <h2 className="text-4xl font-black text-slate-900 tracking-tight">
-              {step === 1 ? "Start your journey" : "Account details"}
+              {step === 1 ? "Start your journey" : step === 2 ? "Account details" : "Welcome aboard!"}
             </h2>
             <p className="text-slate-500 text-lg font-medium max-w-md">
-              {step === 1 
-                ? "Choose how you want to use MPay. You can always change this later." 
-                : "Fill in your information to get started with Africa's safest wallet."}
+              {step === 1 ? "Choose how you want to use MPay." : 
+               step === 2 ? "Fill in your information to get started." : 
+               "Your account has been created successfully."}
             </p>
           </div>
         </div>
 
-        {/* STEP 1: ACCOUNT SELECTION */}
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
             <div className="grid grid-cols-1 gap-4">
@@ -317,33 +343,23 @@ export default function App() {
           </div>
         )}
 
-        {/* STEP 2: FULL FORM */}
         {step === 2 && (
           <form onSubmit={handleSubmit} className="space-y-7 animate-in fade-in slide-in-from-right-6 duration-700 pb-12">
             <button 
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => { setErrors({}); setStep(1); }}
               className="flex items-center text-sm font-bold text-[#A32638] hover:text-[#8B1F2F] transition-colors"
             >
               <ArrowLeft size={18} className="mr-2" /> Change account type
             </button>
 
-            {errors.api && <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-bold">{errors.api}</div>}
-
-            {/* Social Auth Mocks from layout reference */}
-            <div className="grid grid-cols-2 gap-4">
-              <button type="button" className="flex items-center justify-center gap-3 border-2 border-slate-100 rounded-xl py-3 hover:bg-slate-50 transition-colors font-bold text-sm">
-                <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="" /> Google
-              </button>
-              <button type="button" className="flex items-center justify-center gap-3 border-2 border-slate-100 rounded-xl py-3 hover:bg-slate-50 transition-colors font-bold text-sm">
-                <Globe size={16} className="text-[#A32638]" />
-              </button>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-              <div className="relative flex justify-center text-xs uppercase font-black tracking-widest"><span className="bg-white px-4 text-slate-300">Or use email</span></div>
-            </div>
+            {errors.api && (
+              <ErrorAlert 
+                message={errors.api} 
+                onClose={() => setErrors({})}
+                onReset={errors.isConflict ? () => { setErrors({}); setStep(1); } : null} 
+              />
+            )}
 
             <div className="grid grid-cols-1 gap-6">
               {formData.userType === "personal" ? (
@@ -351,178 +367,120 @@ export default function App() {
                   label="Full Name"
                   placeholder="John Doe"
                   value={formData.fullName}
+                  isErrorField={errors.errorField === 'name'}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   error={errors.fullName}
                 />
               ) : (
-                <>
-                  <Input
-                    label="Business Name"
-                    placeholder="Enter registered name"
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    error={errors.businessName}
-                  />
-                  <Input
-                    label="Contact Person"
-                    placeholder="Full name of representative"
-                    value={formData.contactPerson}
-                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                    error={errors.contactPerson}
-                  />
+                <div className="space-y-6">
+                  <Input label="Business Name" placeholder="Enter registered name" value={formData.businessName} isErrorField={errors.errorField === 'name'} onChange={(e) => setFormData({ ...formData, businessName: e.target.value })} error={errors.businessName} />
+                  <Input label="Contact Person" placeholder="Full name of representative" value={formData.contactPerson} isErrorField={errors.errorField === 'contact_person'} onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })} error={errors.contactPerson} />
                   
-                  <div className="p-6 bg-slate-50/50 rounded-2xl border-2 border-slate-100 space-y-5">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Globe size={14} /> Location & Website
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="md:col-span-1">
-                        <Input label="Street No." placeholder="109" value={formData.businessStreetNumber} onChange={(e) => setFormData({ ...formData, businessStreetNumber: e.target.value })} error={errors.businessStreetNumber} />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Input label="Street Address" placeholder="Rehoboth Avenue" value={formData.businessAddress} onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })} error={errors.businessAddress} />
-                      </div>
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Business Address</p>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="col-span-1"><Input label="St No." placeholder="109" value={formData.businessStreetNumber} onChange={(e) => setFormData({ ...formData, businessStreetNumber: e.target.value })} /></div>
+                      <div className="col-span-3"><Input label="Street" placeholder="Rehoboth Avenue" value={formData.businessAddress} isErrorField={errors.errorField === 'business_address'} onChange={(e) => setFormData({ ...formData, businessAddress: e.target.value })} error={errors.businessAddress} /></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input label="City" placeholder="Rehoboth Beach" value={formData.businessCity} onChange={(e) => setFormData({ ...formData, businessCity: e.target.value })} error={errors.businessCity} />
-                      <Input label="State / Province" placeholder="Delaware" value={formData.businessState} onChange={(e) => setFormData({ ...formData, businessState: e.target.value })} error={errors.businessState} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="City" placeholder="City" value={formData.businessCity} onChange={(e) => setFormData({ ...formData, businessCity: e.target.value })} />
+                      <Input label="State" placeholder="State" value={formData.businessState} onChange={(e) => setFormData({ ...formData, businessState: e.target.value })} />
                     </div>
-                    <Input label="Website" icon={Globe} placeholder="https://yourbusiness.com" value={formData.businessWebsite} onChange={(e) => setFormData({ ...formData, businessWebsite: e.target.value })} error={errors.businessWebsite} />
+                    <Input label="Website" icon={Globe} placeholder="https://..." value={formData.businessWebsite} isErrorField={errors.errorField === 'business_website'} onChange={(e) => setFormData({ ...formData, businessWebsite: e.target.value })} />
                   </div>
-                </>
+                </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <PhoneInput
-                  countries={countries}
-                  countryCode={formData.countryCode}
-                  phoneNumber={formData.phoneNumber}
-                  onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })}
-                  onPhoneNumberChange={(num) => setFormData({ ...formData, phoneNumber: num })}
-                  error={errors.phoneNumber}
+                <PhoneInput 
+                  countries={countries} 
+                  countryCode={formData.countryCode} 
+                  phoneNumber={formData.phoneNumber} 
+                  isErrorField={errors.errorField === 'phone'}
+                  onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })} 
+                  onPhoneNumberChange={(num) => setFormData({ ...formData, phoneNumber: num })} 
+                  error={errors.phoneNumber} 
                 />
-                <Input
-                  label="Email Address"
-                  icon={Mail}
-                  type="email"
-                  placeholder="name@email.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  error={errors.email}
+                <Input 
+                  label="Email Address" 
+                  icon={Mail} 
+                  type="email" 
+                  placeholder="name@email.com" 
+                  value={formData.email} 
+                  isErrorField={errors.errorField === 'email'}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                  error={errors.email} 
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="space-y-3">
-                  <Input
-                    label="Password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    error={errors.password}
-                  />
+                  <Input label="Password" type="password" placeholder="••••••••" value={formData.password} isErrorField={errors.errorField === 'password'} onChange={(e) => setFormData({ ...formData, password: e.target.value })} error={errors.password} />
                   <PasswordStrengthIndicator password={formData.password} />
                 </div>
-                <Input
-                  label="Confirm Password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  error={errors.confirmPassword}
-                />
+                <Input label="Confirm Password" type="password" placeholder="••••••••" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} error={errors.confirmPassword} />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Country of Residence</label>
-                <select 
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#A32638]/10 focus:border-[#A32638]"
-                >
-                  <option value="">Select country...</option>
-                  {countries.map((c) => (
-                    <option key={c.country_code} value={c.country_code}>
-                      {c.country_name}
-                    </option>
-                  ))}
-                </select>
-                {errors.country && <p className="text-xs text-red-500 font-bold mt-1">{errors.country}</p>}
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                <Checkbox
-                  label="I agree to the Terms of Service and Merchant Privacy Policy"
-                  checked={formData.agreeTerms}
-                  onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked, agreePrivacy: e.target.checked })}
-                  error={errors.agreement}
-                />
-              </div>
+              <Checkbox label="I agree to the Terms of Service and Privacy Policy" checked={formData.agreeTerms} onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })} error={errors.agreement} />
             </div>
 
-            <Button type="submit" loading={loading} fullWidth>
-              Complete Registration
-            </Button>
+            <Button type="submit" loading={loading} fullWidth>Complete Registration</Button>
           </form>
         )}
 
-        {/* FOOTER */}
-        <p className="mt-auto pt-10 text-center text-slate-400 text-xs font-bold tracking-wide">
+        {step === 3 && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4 shadow-xl shadow-green-100">
+              <PartyPopper size={48} />
+            </div>
+            <h3 className="text-2xl font-black">Registration Complete!</h3>
+            <p className="text-slate-500 max-w-sm">
+              We've sent a verification code to <span className="font-bold text-slate-900">{formData.email}</span>. Please check your inbox to activate your account.
+            </p>
+            <div className="pt-6 w-full max-w-xs space-y-3">
+              <Button fullWidth onClick={() => window.location.href = '/verify'}>Verify Account</Button>
+              <Button variant="outline" fullWidth onClick={() => setStep(1)}>Back to Start</Button>
+            </div>
+          </div>
+        )}
+
+        <p className="mt-auto pt-10 text-center text-slate-400 text-xs font-bold tracking-wide uppercase">
           &copy; {new Date().getFullYear()} MPAY AFRICA LIMITED. SECURED BY ENCRYPTION.
         </p>
       </div>
 
       {/* RIGHT COLUMN: BRAND SIDEBAR */}
       <div className="hidden lg:flex lg:w-[40%] xl:w-[45%] bg-[#5C2D25] relative overflow-hidden flex-col p-16 justify-between border-l-8 border-[#A32638]/30">
-        
-        {/* Background Elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#A32638]/10 blur-[100px] rounded-full -mr-32 -mt-32" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#FFB612]/5 blur-[80px] rounded-full -ml-20 -mb-20" />
-        
         <div className="relative z-10 space-y-12">
           <div className="flex items-center gap-3 text-[#FFB612] opacity-50">
              <ShieldCheck size={32} />
              <div className="h-px w-12 bg-[#A32638]" />
              <Globe size={24} />
           </div>
-          
           <div className="space-y-8">
             <Quote className="text-[#A32638]/30" size={64} fill="currentColor" />
             <h3 className="text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight">
               "Switching to MPay was like moving from a prehistoric system to something from the <span className="text-[#FFB612]">future</span>."
             </h3>
-            
             <div className="flex items-center gap-5 pt-4">
               <div className="w-16 h-16 rounded-full border-4 border-[#A32638]/20 p-1">
                 <div className="w-full h-full rounded-full bg-slate-100 flex items-center justify-center text-[#5C2D25] font-bold text-xl">JD</div>
               </div>
               <div>
-                <p className="text-white font-black text-lg">Dennis chumba</p>
-                <p className="text-[#FFB612]/60 font-bold uppercase tracking-widest text-xs">mpay global CEO</p>
+                <p className="text-white font-black text-lg">Dennis Chumba</p>
+                <p className="text-[#FFB612]/60 font-bold uppercase tracking-widest text-xs">MPay Global CEO</p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Decorative Illustration Area at bottom */}
         <div className="relative h-48 w-full mt-12 bg-[#A32638]/10 rounded-3xl border border-[#A32638]/30 flex items-end justify-center p-8 overflow-hidden">
           <div className="flex gap-1.5 items-end">
             {[40, 60, 30, 80, 50, 90, 45, 70, 55, 85].map((h, i) => (
-              <div 
-                key={i} 
-                className="w-4 bg-[#FFB612]/20 rounded-t-lg transition-all duration-1000 hover:bg-[#FFB612]"
-                style={{ height: `${h}%` }}
-              />
+              <div key={i} className="w-4 bg-[#FFB612]/20 rounded-t-lg transition-all duration-1000 hover:bg-[#FFB612]" style={{ height: `${h}%` }} />
             ))}
           </div>
-          <p className="absolute top-4 left-4 text-[10px] font-black text-[#FFB612]/40 uppercase tracking-[0.3em]">Transaction Insights</p>
-        </div>
-
-        {/* Compliance Footer */}
-        <div className="relative z-10 pt-10 flex gap-6 opacity-30">
-          <div className="flex items-center gap-2 text-white text-[10px] font-bold uppercase tracking-widest"><Lock size={12}/> PCI DSS</div>
-          <div className="flex items-center gap-2 text-white text-[10px] font-bold uppercase tracking-widest"><ShieldCheck size={12}/> 256-BIT SSL</div>
+          <p className="absolute top-4 left-4 text-[10px] font-black text-[#FFB612]/40 uppercase tracking-[0.3em]">Live Insights</p>
         </div>
       </div>
     </div>
