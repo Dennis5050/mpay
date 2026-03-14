@@ -15,6 +15,7 @@ import Login from "./pages/login";
 import Register from "./pages/register";
 import VerifyEmail from "./pages/verify-email";
 import SetPin from "./pages/set-pin";
+import ForgotPassword from "./pages/forgot-password";
 
 // Core Protected Pages
 import Dashboard from "./pages/dashboard";
@@ -84,6 +85,7 @@ const Routes = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/set-pin" element={<SetPin />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* --- Protected Layout --- */}
         <Route

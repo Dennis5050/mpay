@@ -210,3 +210,23 @@ export const getCountries = async () => {
 
   return response.json();
 };
+//reset password
+export const requestPasswordReset = async (data) => {
+
+  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Failed to request password reset");
+  }
+
+  return result;
+
+};

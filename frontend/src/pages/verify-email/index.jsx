@@ -8,9 +8,9 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = "https://api.mpay.africa/api";
   // Fallback to a placeholder if state is missing
-  const email = location.state?.email || "your email";
+  const email = localStorage.getItem("email") || "your email";
   
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,9 @@ const VerifyEmail = () => {
     setLoading(true);
     setError("");
 
+
     try {
+        const userEmail = localStorage.getItem("email") || "your email";
       const res = await fetch(`${API_URL}/auth/verify-email`, {
         method: "POST",
         headers: {
@@ -45,11 +47,14 @@ const VerifyEmail = () => {
           // Include token if your registration returns a temporary one
           Authorization: `Bearer ${localStorage.getItem("authToken")}`
         },
-        body: JSON.stringify({ email, otp: otpValue })
+        body: JSON.stringify({ email: userEmail , otp: otpValue })
       });
+      console.log(userEmail,otpValue);
+
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "The code you entered is invalid.");
+      console.log(data);
 
       // Success: Proceed to final step or Dashboard
       navigate("/set-pin"); 

@@ -3,13 +3,20 @@ import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 
 const RecentTransactionCard = ({ transaction }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: transaction?.currency,
+ const formatCurrency = (amount) => {
+  const currency = transaction?.currency || "KES"; // fallback
+
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
       minimumFractionDigits: 2
-    })?.format(amount);
-  };
+    }).format(amount || 0);
+  } catch (error) {
+    // fallback if currency still invalid
+    return `${currency} ${Number(amount || 0).toLocaleString()}`;
+  }
+};
 
   const formatTime = (date) => {
     return date?.toLocaleTimeString('en-US', {

@@ -6,7 +6,7 @@ import PinInput from "./components/PinInput";
 
 const SetPin = () => {
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = "https://api.mpay.africa/api";
 
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");

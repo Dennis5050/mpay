@@ -177,13 +177,13 @@ const LoginForm = () => {
           <span className="text-sm">Remember me</span>
         </label>
 
-        <button
-          type="button"
-          onClick={() => navigate('/forgot-password')}
-          className="text-sm text-primary hover:underline"
-        >
-          Forgot Password?
-        </button>
+       <button
+  type="button"
+  onClick={() => navigate("/forgot-password")}
+  className="text-sm font-semibold text-[#A32638] hover:underline"
+>
+  Forgot password?
+</button>
       </div>
 
       {/* Submit Error */}

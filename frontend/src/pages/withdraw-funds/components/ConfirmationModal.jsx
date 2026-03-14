@@ -1,115 +1,218 @@
-import React from 'react';
-import Button from '../../../components/ui/Button';
-import Icon from '../../../components/AppIcon';
+import React, { useEffect } from "react";
+import Icon from "../../../components/AppIcon";
+import Button from "../../../components/ui/Button";
 
-const ConfirmationModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  withdrawalData,
-  isProcessing 
+const formatCurrency = (currency, value) => {
+  const amount = Number(value) || 0;
+  return `${currency} ${amount.toLocaleString()}`;
+};
+
+const ConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  transactionData = {},
+  isProcessing = false
 }) => {
   if (!isOpen) return null;
 
-  const { amount, method, accountDetails, fee, netAmount } = withdrawalData;
+  const {
+    amount = 0,
+    fee = 0,
+    total = 0,
+    currency = "KES",
+    account = {},
+    payment_method = {}
+  } = transactionData;
 
-  const methodLabels = {
-    bank: 'Bank Transfer',
-    mobile: 'Mobile Money',
-    cash: 'Cash Pickup'
-  };
+  const accountNumber = account?.account_number || "-";
+  const methodName =
+    payment_method?.name ||
+    payment_method?.label ||
+    payment_method?.code ||
+    "Payment Method";
+
+  // ESC key support
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape" && !isProcessing) {
+        onClose?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isProcessing, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-custom">
+
+        <div className="p-6 space-y-6">
+
+          {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground">
-              Confirm Withdrawal
-            </h2>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
+                <Icon
+                  name="AlertCircle"
+                  size={24}
+                  color="var(--color-warning)"
+                />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Confirm Transaction
+                </h2>
+
+                <p className="text-sm text-muted-foreground">
+                  Review details before sending
+                </p>
+              </div>
+            </div>
+
             <button
               onClick={onClose}
               disabled={isProcessing}
-              className="p-2 hover:bg-muted rounded-lg transition-colors duration-250"
+              className="p-2 hover:bg-muted rounded-lg transition disabled:opacity-50"
               aria-label="Close modal"
             >
-              <Icon name="X" size={20} color="var(--color-foreground)" />
+              <Icon name="X" size={20} />
             </button>
+
           </div>
 
-          <div className="space-y-3">
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm text-muted-foreground mb-1">Withdrawal Amount</p>
-              <p className="text-2xl md:text-3xl font-heading font-bold text-primary">
-                KES {netAmount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
+          {/* Recipient Account */}
+          <div className="p-4 bg-muted/40 border border-border rounded-lg">
 
-            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Method</span>
-                <span className="text-sm font-medium text-foreground">{methodLabels?.[method]}</span>
+            <div className="flex items-center gap-3">
+
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Icon name="User" size={22} />
               </div>
 
-              {method === 'bank' && accountDetails?.accountNumber && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Account Number</span>
-                    <span className="text-sm font-medium text-foreground">{accountDetails?.accountNumber}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Bank</span>
-                    <span className="text-sm font-medium text-foreground">{accountDetails?.bankName}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">
+                  Recipient Account
+                </p>
 
-              {method === 'mobile' && accountDetails?.mobileNumber && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Mobile Number</span>
-                  <span className="text-sm font-medium text-foreground">{accountDetails?.mobileNumber}</span>
-                </div>
-              )}
+                <p className="text-sm text-muted-foreground">
+                  {accountNumber}
+                </p>
+              </div>
 
-              {method === 'cash' && accountDetails?.pickupLocation && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Pickup Location</span>
-                  <span className="text-sm font-medium text-foreground">{accountDetails?.pickupLocation}</span>
-                </div>
-              )}
             </div>
+
           </div>
 
-          <div className="p-3 bg-warning/10 rounded-lg border border-warning/20">
-            <div className="flex items-start gap-2">
-              <Icon name="AlertTriangle" size={16} color="var(--color-warning)" className="mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-warning">
-                This action cannot be undone. Please verify all details before confirming.
-              </p>
-            </div>
+          {/* Payment Method */}
+          <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
+            <span className="text-sm text-muted-foreground">
+              Payment Method
+            </span>
+
+            <span className="font-medium">
+              {methodName}
+            </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          {/* Amount Summary */}
+
+          <div className="space-y-3">
+
+            <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Amount
+              </span>
+
+              <span className="font-semibold">
+                {formatCurrency(currency, amount)}
+              </span>
+            </div>
+
+            <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Transaction Fee
+              </span>
+
+              <span className="font-medium">
+                {formatCurrency(currency, fee)}
+              </span>
+            </div>
+
+            <div className="flex justify-between p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <span className="font-semibold">
+                Total Debit
+              </span>
+
+              <span className="font-bold text-lg text-primary">
+                {formatCurrency(currency, total)}
+              </span>
+            </div>
+
+          </div>
+
+          {/* Notice */}
+
+          <div className="p-4 bg-warning/5 border border-warning/20 rounded-lg">
+
+            <div className="flex gap-3">
+              <Icon
+                name="Info"
+                size={18}
+                color="var(--color-warning)"
+              />
+
+              <div>
+                <p className="text-sm font-medium mb-1">
+                  Important Notice
+                </p>
+
+                <p className="text-xs text-muted-foreground">
+                  Verify recipient account carefully. Transactions
+                  cannot be reversed once confirmed.
+                </p>
+
+              </div>
+            </div>
+
+          </div>
+
+          {/* Actions */}
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border">
+
             <Button
               variant="outline"
-              fullWidth
               onClick={onClose}
               disabled={isProcessing}
+              fullWidth
             >
               Cancel
             </Button>
+
             <Button
               variant="default"
-              fullWidth
               onClick={onConfirm}
               loading={isProcessing}
-              iconName="Check"
+              disabled={isProcessing}
+              iconName="Send"
               iconPosition="right"
+              fullWidth
             >
-              Confirm Withdrawal
+              {isProcessing ? "Processing..." : "Confirm & Send"}
             </Button>
+
           </div>
+
         </div>
+
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { 
   User, 
   Briefcase, 
@@ -147,35 +148,78 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
-const PhoneInput = ({ countryCode, phoneNumber, onCountryCodeChange, onPhoneNumberChange, error, isErrorField, countries }) => (
-  <div className="space-y-1.5">
-    <label className="text-sm font-semibold text-slate-700">Phone Number</label>
-    <div className="flex gap-2">
-      <select 
-        value={countryCode}
-        onChange={(e) => onCountryCodeChange(e.target.value)}
-        className={`w-28 rounded-xl border bg-white px-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#A32638]/10 focus:border-[#A32638] 
-          ${isErrorField ? 'border-red-500' : 'border-slate-200'}`}
-      >
-        {countries.map((c) => (
-          <option key={c.country_code} value={c.phone_prefix}>
-            {c.country_code} ({c.phone_prefix})
-          </option>
-        ))}
-      </select>
-      <div className="flex-1">
-        <Input 
-          type="tel" 
-          placeholder="712 345 678" 
-          value={phoneNumber} 
-          onChange={(e) => onPhoneNumberChange(e.target.value)} 
-          error={error}
-          isErrorField={isErrorField}
-        />
+const PhoneInput = ({
+  countryCode,
+  phoneNumber,
+  onCountryCodeChange,
+  onPhoneNumberChange,
+  error,
+  isErrorField,
+  countries = []
+}) => {
+
+  const selectedCountry = countries.find(
+    (c) => c.phone_prefix === countryCode
+  );
+
+  return (
+    <div className="space-y-1.5">
+
+      <label className="text-sm font-semibold text-slate-700">
+        Phone Number
+      </label>
+
+      <div className="flex gap-2 items-center">
+
+        {/* Flag */}
+        {selectedCountry?.flag_url && (
+          <img
+            src={selectedCountry.flag_url}
+            alt={selectedCountry.country_code}
+            className="w-6 h-4 rounded-sm"
+          />
+        )}
+
+        {/* Country Select */}
+        <select
+          value={countryCode}
+          onChange={(e) => onCountryCodeChange(e.target.value)}
+          className={`w-40 rounded-xl border bg-white px-3 py-2 text-sm font-semibold outline-none focus:ring-4 focus:ring-[#A32638]/10 focus:border-[#A32638]
+          ${isErrorField ? "border-red-500" : "border-slate-200"}`}
+        >
+
+          {countries.map((c) => (
+            <option
+              key={c.country_code}
+              value={c.phone_prefix}
+            >
+              {c.country_name} ({c.phone_prefix})
+            </option>
+          ))}
+
+        </select>
+
+        {/* Phone Input */}
+        <div className="flex-1">
+          <Input
+            type="tel"
+            placeholder="712 345 678"
+            value={phoneNumber || ""}
+            onChange={(e) =>
+              onPhoneNumberChange(
+                e.target.value.replace(/\D/g, "")
+              )
+            }
+            error={error}
+            isErrorField={isErrorField}
+          />
+        </div>
+
       </div>
+
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * MAIN APP COMPONENT
@@ -267,6 +311,8 @@ const handleSubmit = async (e) => {
     };
 
     await register(payload);
+    //store user email on local storage
+    localStorage.setItem("email",payload.email)
 
     // move to success step
     setStep(3);
@@ -304,6 +350,12 @@ const handleSubmit = async (e) => {
                 <div className={`h-2.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-[#A32638]' : 'bg-slate-100'}`} />
               </div>
             )}
+            <Link
+  to="/login"
+  className="text-sm font-bold text-[#A32638] hover:text-[#8B1F2F]"
+>
+  Login
+</Link>
           </div>
 
           <div className="space-y-3">
@@ -335,11 +387,23 @@ const handleSubmit = async (e) => {
               />
             </div>
             {errors.userType && <p className="text-sm text-red-500 font-bold">{errors.userType}</p>}
-            <div className="pt-8">
-              <Button fullWidth onClick={() => validateStep1() && setStep(2)}>
-                Continue <ChevronRight size={20} className="ml-2" />
-              </Button>
-            </div>
+           <div className="pt-8 space-y-4">
+
+  <Button fullWidth onClick={() => validateStep1() && setStep(2)}>
+    Continue <ChevronRight size={20} className="ml-2" />
+  </Button>
+
+  <p className="text-center text-sm text-slate-500">
+    Already have an account?{" "}
+    <Link
+      to="/login"
+      className="font-bold text-[#A32638] hover:underline"
+    >
+      Login here
+    </Link>
+  </p>
+
+</div>
           </div>
         )}
 
@@ -438,7 +502,7 @@ const handleSubmit = async (e) => {
               We've sent a verification code to <span className="font-bold text-slate-900">{formData.email}</span>. Please check your inbox to activate your account.
             </p>
             <div className="pt-6 w-full max-w-xs space-y-3">
-              <Button fullWidth onClick={() => window.location.href = '/verify'}>Verify Account</Button>
+              <Button fullWidth onClick={() => window.location.href = '/verify-email'}>Verify Account</Button>
               <Button variant="outline" fullWidth onClick={() => setStep(1)}>Back to Start</Button>
             </div>
           </div>

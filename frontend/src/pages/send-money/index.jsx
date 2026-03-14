@@ -4,13 +4,15 @@ import Icon from "../../components/AppIcon";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 
-import RecipientSelector from "./components/RecipientSelector";
+import StepCountry from "./components/StepCountry";
+import StepMethod from "./components/StepMethod";
+import PaymentDetailsForm from "./components/PaymentDetailsForm";
 import TransactionSummary from "./components/TransactionSummary";
 import ConfirmationModal from "./components/ConfirmationModal";
 import SuccessModal from "./components/SuccessModal";
 import StepProgress from "./components/StepProgress";
 
-const API_BASE = "https://app.mpayafrica.site/api";
+const API_BASE = "https://api.mpay.africa/api";
 
 const SendMoney = () => {
   // ======================
@@ -36,6 +38,7 @@ const SendMoney = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showWaiting, setShowWaiting] = useState(false);
 
   const userBalance = 5420.75;
   const currency = formData?.country?.currency || "KES";
@@ -76,7 +79,7 @@ const SendMoney = () => {
         newErrors.amount = "Insufficient balance";
       }
 
-      if (!formData.recipient) {
+     if (!formData.account?.account_number) {
         newErrors.recipient = "Select a recipient";
       }
     }
@@ -103,80 +106,109 @@ const SendMoney = () => {
   // ======================
   // API TRANSACTION
   // ======================
-  const handleConfirmTransaction = async () => {
-    try {
-      setIsProcessing(true);
+const handleConfirmTransaction = async () => {
+  try {
+    setIsProcessing(true);
 
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("mpay_token");
 
-      const payload = {
-        country_code: formData.country.country_code,
-        currency: formData.country.currency,
-        payment_method: {
-          category: formData.payment_method.category
-        },
-        transaction: {
-          type: "deposit", // or transfer depending on page
-          amount: amountNum,
-          remark: formData.note
-        },
-        account: {
-          phone: formData.recipient.phone
-        }
-      };
+    const payload = {
+      country_code: formData?.country?.country_code,
+      currency: formData?.country?.currency,
 
-      // Create payment intent
-      const res = await fetch(`${API_BASE}/payments/intent`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      payment_method: {
+        category: formData?.payment_method?.category,
+        code: formData?.payment_method?.code,
+        provider:'sasapay',
+      },
 
-      const data = await res.json();
+      transaction: {
+        type: "deposit",
+        amount: amountNum,
+        remark: formData?.note || ""
+      },
 
-      if (!res.ok) {
-        throw new Error(data.message || "Transaction failed");
-      }
+      account: formData?.account
+    };
 
-      const reference = data.reference;
+    console.log("Payment Payload:", payload);
 
-      // Poll status
-      let status = "processing";
+    // ---------------------------
+    // INITIATE PAYMENT
+    // ---------------------------
 
-      while (status === "processing") {
-        await new Promise((r) => setTimeout(r, 2000));
+    const res = await fetch(`${API_BASE}/payments/initiate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
 
-        const statusRes = await fetch(
-          `${API_BASE}/payments/status/${reference}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
+    const data = await res.json();
+    console.log("Payment Response:", data);
 
-        const statusData = await statusRes.json();
-        status = statusData.status;
-      }
-
-      setIsProcessing(false);
-      setShowConfirmation(false);
-
-      if (status === "success") {
-        setShowSuccess(true);
-      } else {
-        alert("Transaction failed");
-      }
-    } catch (error) {
-      console.error(error);
-      setIsProcessing(false);
-      alert(error.message);
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.message || "Transaction failed");
     }
-  };
+
+    const reference = data?.data?.reference;
+    let status = data?.data?.status || "pending";
+
+    if (!reference) {
+      throw new Error("Missing transaction reference");
+    }
+
+    // ---------------------------
+    // POLL PAYMENT STATUS
+    // ---------------------------
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+
+    while (
+      (status === "pending" || status === "processing") &&
+      attempts < MAX_ATTEMPTS
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const statusRes = await fetch(
+        `${API_BASE}/payments/status/${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const statusData = await statusRes.json();
+
+      console.log("Status Response:", statusData);
+
+      status =  statusData?.status || status;
+
+      attempts++;
+    }
+
+    setIsProcessing(false);
+    setShowConfirmation(false);
+
+    if (status === "success" || status === "completed") {
+      setShowSuccess(true);
+    } else if (status === "failed") {
+      alert("Transaction failed");
+    } else {
+      alert("Transaction is still processing. Check your transactions history.");
+    }
+
+  } catch (error) {
+    console.error("Payment Error:", error);
+    setIsProcessing(false);
+    alert(error.message || "Payment failed");
+  }
+};
 
   // ======================
   // RESET
@@ -249,107 +281,30 @@ const SendMoney = () => {
               >
 
                 {/* STEP 1 */}
-                {step === 1 && (
-                  <>
-                    <h2 className="text-lg font-semibold mb-4">
-                      Select Country
-                    </h2>
-
-                    <select
-                      className="w-full border rounded-lg p-3"
-                      value={formData.country?.country_code || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          country: {
-                            country_code: e.target.value,
-                            currency: "KES"
-                          }
-                        })
-                      }
-                    >
-                      <option value="">Choose country</option>
-                      <option value="KE">Kenya</option>
-                      <option value="GH">Ghana</option>
-                      <option value="NG">Nigeria</option>
-                    </select>
-                  </>
-                )}
+              {step === 1 && (
+  <StepCountry
+    formData={formData}
+    setFormData={setFormData}
+  />
+)}
 
                 {/* STEP 2 */}
-                {step === 2 && (
-                  <>
-                    <h2 className="text-lg font-semibold mb-4">
-                      Payment Method
-                    </h2>
-
-                    {["mobile_money", "bank"].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            payment_method: {
-                              category: m,
-                              label:
-                                m === "mobile_money"
-                                  ? "Mobile Money"
-                                  : "Bank Transfer"
-                            }
-                          })
-                        }
-                        className={`w-full p-3 border rounded-lg text-left mb-3 ${
-                          formData.payment_method?.category === m
-                            ? "border-primary bg-primary/5"
-                            : ""
-                        }`}
-                      >
-                        {m === "mobile_money"
-                          ? "Mobile Money"
-                          : "Bank Transfer"}
-                      </button>
-                    ))}
-                  </>
-                )}
+               {step === 2 && (
+  <StepMethod
+    formData={formData}
+    setFormData={setFormData}
+  />
+)}
 
                 {/* STEP 3 */}
-                {step === 3 && (
-                  <>
-                    <Input
-                      label="Amount"
-                      value={formData.amount}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          amount: e.target.value
-                        })
-                      }
-                      error={errors.amount}
-                      placeholder="0.00"
-                    />
-
-                    <RecipientSelector
-                      selectedRecipient={formData.recipient}
-                      onRecipientSelect={(recipient) =>
-                        setFormData({ ...formData, recipient })
-                      }
-                      error={errors.recipient}
-                    />
-
-                    <Input
-                      label="Note"
-                      value={formData.note}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          note: e.target.value
-                        })
-                      }
-                      placeholder="Optional note"
-                    />
-                  </>
-                )}
+              {step === 3 && (
+  <PaymentDetailsForm
+    formData={formData}
+    setFormData={setFormData}
+    paymentMethod={formData.payment_method}
+    errors={errors}
+  />
+)}
 
                 {/* STEP 4 */}
                 {step === 4 && (

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { loginUser, clearAuthError } from "../../Redux/slices/authSlice";
@@ -115,12 +116,7 @@ export default function Login() {
     rememberMe: false
   });
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+
 
   const validate = () => {
     const newErrors = {};
@@ -238,7 +234,15 @@ export default function Login() {
             <Button type="submit" loading={loading} fullWidth>
               Log In to MPay <ChevronRight size={18} className="ml-2" />
             </Button>
-
+       <p className="text-center text-sm text-slate-500 mt-4">
+  Don't have an account?{" "}
+  <Link
+    to="/register"
+    className="font-bold text-[#A32638] hover:underline"
+  >
+    Register here
+  </Link>
+</p>
             {/* Global Error Display */}
             {error && (
               <p className="text-center text-sm font-bold text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">

@@ -1,244 +1,355 @@
 import React, { useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import Icon from "../../components/AppIcon";
-import StepProgress from "../send-money/components/StepProgress";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
 
-import WithdrawalMethodCard from "./components/WithdrawalMethodCard";
-import WithdrawalForm from "./components/WithdrawalForm";
-import WithdrawalSummary from "./components/WithdrawalSummary";
+import StepCountry from "./components/StepCountry";
+import StepMethod from "./components/StepMethod";
+import PaymentDetailsForm from "./components/PaymentDetailsForm";
+import TransactionSummary from "./components/TransactionSummary";
 import ConfirmationModal from "./components/ConfirmationModal";
 import SuccessModal from "./components/SuccessModal";
+import StepProgress from "./components/StepProgress";
 
-const WithdrawFunds = () => {
+const API_BASE = "https://api.mpay.africa/api";
+
+const SendMoney = () => {
   // ======================
-  // STEP CONTROL
+  // STEP
   // ======================
   const [step, setStep] = useState(1);
 
-  const [selectedMethod, setSelectedMethod] = useState(null);
-  const [withdrawalData, setWithdrawalData] = useState(null);
+  // ======================
+  // FORM STATE (Senior pattern)
+  // ======================
+  const [formData, setFormData] = useState({
+    country: null,
+    payment_method: null,
+    amount: "",
+    recipient: null,
+    note: ""
+  });
 
+  // ======================
+  // UI STATE
+  // ======================
+  const [errors, setErrors] = useState({});
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showWaiting, setShowWaiting] = useState(false);
 
-  const availableBalance = 125430.5;
-
-  // ======================
-  // CONFIG
-  // ======================
-  const savedMethods = [
-    {
-      id: "bank-1",
-      type: "bank",
-      label: "Equity Bank - ****4567",
-      description: "John Doe - Equity Bank Kenya",
-    },
-    {
-      id: "mobile-1",
-      type: "mobile",
-      label: "M-Pesa - +254 712 ****678",
-      description: "Primary mobile money account",
-    },
-  ];
-
-  const processingTimes = {
-    bank: "1-3 business days",
-    mobile: "Instant",
-    cash: "2-4 hours",
-  };
-
-  const feePercentages = {
-    bank: 0.015,
-    mobile: 0.02,
-    cash: 0.03,
-  };
+  const userBalance = 5420.75;
+  const currency = formData?.country?.currency || "KES";
 
   // ======================
-  // STEP HANDLERS
+  // FEES
   // ======================
-  const handleMethodSelect = (method) => {
-    setSelectedMethod(method);
-    setStep(2);
+  const calculateFee = (amount) => {
+    const value = Number(amount) || 0;
+    if (value <= 100) return 2.5;
+    if (value <= 500) return 5.0;
+    if (value <= 1000) return 8.5;
+    return value * 0.01;
   };
 
-  const handleFormSubmit = (formData) => {
-    const fee = formData.amount * feePercentages[formData.method];
-    const netAmount = formData.amount - fee;
+  const amountNum = Number(formData.amount) || 0;
+  const fee = calculateFee(amountNum);
+  const total = amountNum + fee;
 
-    setWithdrawalData({
-      ...formData,
-      fee,
-      netAmount,
-      processingTime: processingTimes[formData.method],
-    });
+  // ======================
+  // VALIDATION
+  // ======================
+  const validateStep = () => {
+    const newErrors = {};
 
-    setStep(3);
-  };
+    if (step === 1 && !formData.country) {
+      newErrors.country = "Select a country";
+    }
 
-  const handleConfirmWithdrawal = () => {
-    setIsProcessing(true);
+    if (step === 2 && !formData.payment_method) {
+      newErrors.method = "Select a payment method";
+    }
 
-    setTimeout(() => {
-      const referenceNumber = `WD${Date.now()
-        .toString()
-        .slice(-8)}`;
-
-      const estimatedCompletion = new Date();
-
-      if (withdrawalData.method === "bank") {
-        estimatedCompletion.setDate(estimatedCompletion.getDate() + 2);
-      } else if (withdrawalData.method === "cash") {
-        estimatedCompletion.setHours(estimatedCompletion.getHours() + 3);
-      } else {
-        estimatedCompletion.setMinutes(estimatedCompletion.getMinutes() + 5);
+    if (step === 3) {
+      if (!formData.amount || amountNum <= 0) {
+        newErrors.amount = "Enter a valid amount";
+      } else if (amountNum > userBalance) {
+        newErrors.amount = "Insufficient balance";
       }
 
-      setWithdrawalData((prev) => ({
-        ...prev,
-        referenceNumber,
-        estimatedCompletion,
-      }));
+     if (!formData.account?.account_number) {
+        newErrors.recipient = "Select a recipient";
+      }
+    }
 
-      setIsProcessing(false);
-      setShowConfirmation(false);
-      setShowSuccess(true);
-    }, 2000);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ======================
+  // NAVIGATION
+  // ======================
+  const handleNext = (e) => {
+    e.preventDefault();
+    if (!validateStep()) return;
+
+    if (step < 4) setStep(step + 1);
+    else setShowConfirmation(true);
   };
 
   const handleBack = () => {
-    if (step === 2) {
-      setStep(1);
-      setSelectedMethod(null);
-    } else if (step === 3) {
-      setStep(2);
-    }
+    if (step > 1) setStep(step - 1);
   };
 
-  const handleCloseSuccess = () => {
+  // ======================
+  // API TRANSACTION
+  // ======================
+const handleConfirmTransaction = async () => {
+  try {
+    setIsProcessing(true);
+
+    const token = localStorage.getItem("mpay_token");
+
+    const payload = {
+      country_code: formData?.country?.country_code,
+      currency: formData?.country?.currency,
+
+      payment_method: {
+        category: formData?.payment_method?.category,
+        code: formData?.payment_method?.code,
+        provider: formData?.payment_method?.provider
+      },
+
+      transaction: {
+        type: "withdrawal",
+        amount: amountNum,
+        remark: formData?.note || ""
+      },
+
+      account: formData?.account
+    };
+
+    console.log("Payment Payload:", payload);
+
+    // ---------------------------
+    // INITIATE PAYMENT
+    // ---------------------------
+
+    const res = await fetch(`${API_BASE}/payments/initiate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    console.log("Payment Response:", data);
+
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.message || "Transaction failed");
+    }
+
+    const reference = data?.data?.reference;
+    let status = data?.data?.status || "pending";
+
+    if (!reference) {
+      throw new Error("Missing transaction reference");
+    }
+
+    // ---------------------------
+    // POLL PAYMENT STATUS
+    // ---------------------------
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+
+    while (
+      (status === "pending" || status === "processing") &&
+      attempts < MAX_ATTEMPTS
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const statusRes = await fetch(
+        `${API_BASE}/payments/status/${reference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const statusData = await statusRes.json();
+
+      console.log("Status Response:", statusData);
+
+      status =  statusData?.status || status;
+
+      attempts++;
+    }
+
+    setIsProcessing(false);
+    setShowConfirmation(false);
+
+    if (status === "success" || status === "completed") {
+      setShowSuccess(true);
+    } else if (status === "failed") {
+      alert("Transaction failed");
+    } else {
+      alert("Transaction is still processing. Check your transactions history.");
+    }
+
+  } catch (error) {
+    console.error("Payment Error:", error);
+    setIsProcessing(false);
+    alert(error.message || "Payment failed");
+  }
+};
+
+  // ======================
+  // RESET
+  // ======================
+  const handleSuccessClose = () => {
     setShowSuccess(false);
     setStep(1);
-    setSelectedMethod(null);
-    setWithdrawalData(null);
+    setFormData({
+      country: null,
+      payment_method: null,
+      amount: "",
+      recipient: null,
+      note: ""
+    });
+  };
+
+  // ======================
+  // CONFIRMATION DATA
+  // ======================
+  const transactionData = {
+    amount: amountNum.toFixed(2),
+    recipient: formData.recipient,
+    fee: fee.toFixed(2),
+    total: total.toFixed(2),
+    currency,
+    transactionRef: `TXN${Date.now().toString().slice(-8)}`,
+    timestamp: new Date().toISOString()
   };
 
   // ======================
   // UI
   // ======================
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex">
       <Sidebar />
 
-      <main className="lg:ml-60 min-h-screen">
-        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 lg:ml-60 p-4 md:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto space-y-6">
+
           {/* Header */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Icon name="Wallet" size={28} color="var(--color-primary)" />
-              <h1 className="text-3xl font-bold">Withdraw Funds</h1>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Icon name="Send" size={24} />
             </div>
-            <p className="text-muted-foreground">
-              Transfer money to your bank or mobile wallet
-            </p>
+            <div>
+              <h1 className="text-2xl font-bold">Send Money</h1>
+              <p className="text-sm text-muted-foreground">
+                Transfer funds across Africa
+              </p>
+            </div>
           </div>
 
-          {/* Step Progress */}
           <StepProgress currentStep={step} />
 
           {/* Balance */}
-          <div className="p-5 bg-card rounded-xl border border-border flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Available Balance
-              </p>
-              <p className="text-2xl font-bold">
-                KES {availableBalance.toLocaleString()}
-              </p>
-            </div>
-            <Icon name="Wallet" size={28} color="var(--color-primary)" />
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <p className="text-sm text-muted-foreground">Available Balance</p>
+            <p className="text-2xl font-bold">
+              {currency} {userBalance.toFixed(2)}
+            </p>
           </div>
 
-          {/* STEP 1 — METHOD */}
-          {step === 1 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">
-                Select Withdrawal Method
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <WithdrawalMethodCard method="bank" onSelect={handleMethodSelect} />
-                <WithdrawalMethodCard method="mobile" onSelect={handleMethodSelect} />
-                <WithdrawalMethodCard method="cash" onSelect={handleMethodSelect} />
-              </div>
-            </div>
-          )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* STEP 2 — DETAILS */}
-          {step === 2 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
-                <div className="flex justify-between mb-6">
-                  <h2 className="text-xl font-semibold">
-                    Withdrawal Details
-                  </h2>
-                  <button
-                    className="text-primary text-sm"
-                    onClick={() => {
-                      setStep(1);
-                      setSelectedMethod(null);
-                    }}
-                  >
-                    Change Method
-                  </button>
-                </div>
+            {/* LEFT */}
+            <div className="lg:col-span-2">
+              <form
+                onSubmit={handleNext}
+                className="bg-card border border-border rounded-xl p-6 space-y-6"
+              >
 
-                <WithdrawalForm
-                  selectedMethod={selectedMethod}
-                  onSubmit={handleFormSubmit}
-                  availableBalance={availableBalance}
-                  savedMethods={savedMethods.filter(
-                    (m) => m.type === selectedMethod
-                  )}
-                />
-              </div>
-            </div>
-          )}
+                {/* STEP 1 */}
+              {step === 1 && (
+  <StepCountry
+    formData={formData}
+    setFormData={setFormData}
+  />
+)}
 
-          {/* STEP 3 — REVIEW */}
-          {step === 3 && withdrawalData && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
-                <h2 className="text-xl font-semibold">Review Withdrawal</h2>
+                {/* STEP 2 */}
+               {step === 2 && (
+  <StepMethod
+    formData={formData}
+    setFormData={setFormData}
+  />
+)}
 
-                <p><strong>Method:</strong> {withdrawalData.method}</p>
-                <p><strong>Amount:</strong> KES {withdrawalData.amount}</p>
-                <p><strong>Fee:</strong> KES {withdrawalData.fee.toFixed(2)}</p>
-                <p><strong>You Receive:</strong> KES {withdrawalData.netAmount.toFixed(2)}</p>
-                <p><strong>Processing Time:</strong> {withdrawalData.processingTime}</p>
+                {/* STEP 3 */}
+              {step === 3 && (
+  <PaymentDetailsForm
+    formData={formData}
+    setFormData={setFormData}
+    paymentMethod={formData.payment_method}
+    errors={errors}
+  />
+)}
 
-                <div className="flex gap-3 pt-4 border-t">
-                  <button
+                {/* STEP 4 */}
+                {step === 4 && (
+                  <div className="space-y-2 text-sm">
+                    <h2 className="text-lg font-semibold">
+                      Review Transaction
+                    </h2>
+                    <p>Country: {formData.country?.country_code}</p>
+                    <p>Method: {formData.payment_method?.label}</p>
+                    <p>Amount: {currency} {amountNum.toFixed(2)}</p>
+                    <p>Fee: {currency} {fee.toFixed(2)}</p>
+                    <p>Total: {currency} {total.toFixed(2)}</p>
+                    <p>Recipient: {formData.recipient?.name || "-"}</p>
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex justify-between pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={step === 1}
                     onClick={handleBack}
-                    className="px-4 py-2 border rounded-lg"
                   >
                     Back
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmation(true)}
-                    className="px-4 py-2 bg-primary text-white rounded-lg"
-                  >
-                    Confirm Withdrawal
-                  </button>
-                </div>
-              </div>
+                  </Button>
 
-              <WithdrawalSummary
-                amount={withdrawalData.amount}
-                method={withdrawalData.method}
-                fee={withdrawalData.fee}
-                processingTime={withdrawalData.processingTime}
-              />
+                  <Button
+                    type="submit"
+                    iconName={step === 4 ? "Send" : "ArrowRight"}
+                    iconPosition="right"
+                  >
+                    {step === 4 ? "Confirm & Send" : "Next"}
+                  </Button>
+                </div>
+              </form>
             </div>
-          )}
+
+            {/* RIGHT */}
+            <TransactionSummary
+              amount={amountNum.toFixed(2)}
+              recipient={formData.recipient}
+              currency={currency}
+            />
+          </div>
         </div>
       </main>
 
@@ -246,18 +357,18 @@ const WithdrawFunds = () => {
       <ConfirmationModal
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
-        onConfirm={handleConfirmWithdrawal}
-        withdrawalData={withdrawalData}
+        onConfirm={handleConfirmTransaction}
+        transactionData={transactionData}
         isProcessing={isProcessing}
       />
 
       <SuccessModal
         isOpen={showSuccess}
-        onClose={handleCloseSuccess}
-        transactionData={withdrawalData}
+        onClose={handleSuccessClose}
+        transactionData={transactionData}
       />
     </div>
   );
 };
 
-export default WithdrawFunds;
+export default SendMoney;
