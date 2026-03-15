@@ -298,21 +298,22 @@ const handleSubmit = async (e) => {
   setLoading(true);
 
   try {
-
     const payload = {
       account_type: formData.userType,
-      name: formData.userType === "personal"
-        ? formData.fullName
-        : formData.businessName,
+      name:
+        formData.userType === "personal"
+          ? formData.fullName
+          : formData.businessName,
       email: formData.email,
       phone: `${formData.countryCode}${formData.phoneNumber}`,
       password: formData.password,
-      password_confirmation: formData.confirmPassword
+      password_confirmation: formData.confirmPassword,
     };
 
-    await register(payload);
-    //store user email on local storage
-    localStorage.setItem("email",payload.email)
+    const res = await register(payload);
+
+    // store email for OTP verification
+    sessionStorage.setItem("mpay_verify_email", payload.email);
 
     // move to success step
     setStep(3);
@@ -321,14 +322,13 @@ const handleSubmit = async (e) => {
     console.error("Register error:", err);
 
     setErrors({
-      api: err.message || "Registration failed"
+      api: err.message || "Registration failed",
     });
 
   } finally {
     setLoading(false);
   }
 };
-
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-slate-900">
       

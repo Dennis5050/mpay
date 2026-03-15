@@ -194,47 +194,44 @@ const KYCPage = () => {
     selfie: null,
   });
 
-  /* ----------------------------------------------------
-     CHECK KYC STATUS
-  ---------------------------------------------------- */
 
-  useEffect(() => {
+ /* ----------------------------------------------------
+   CHECK KYC STATUS
+---------------------------------------------------- */
 
-    const checkStatus = async () => {
+useEffect(() => {
 
-      try {
+  const checkStatus = async () => {
 
-        const summary = await getDashboardSummary();
+    try {
 
-        const status = summary?.onboarding?.kyc_status;
+      const user = JSON.parse(localStorage.getItem("mpay_user"));
 
-        console.log("KYC STATUS:", status);
-
-        setKycStatus(status);
-
-        if (status === "verified") {
-          navigate("/kyc/verified");
-          return;
-        }
-
-        if (status === "pending") {
-          navigate("/kyc/verified");
-          return;
-        }
-
-      } catch (err) {
-        console.error("KYC check failed:", err);
-      } finally {
-        setCheckingStatus(false);
+      if (user?.kyc_status === "approved") {
+        navigate("/kyc/verified");
+        return;
       }
 
-    };
+      // pending users see the form
+      setKycStatus("pending");
 
-    checkStatus();
+    } catch (err) {
 
-    getCountries().then(setCountries);
+      console.error("KYC check failed:", err);
+      setKycStatus("pending");
 
-  }, []);
+    } finally {
+
+      setCheckingStatus(false);
+
+    }
+
+  };
+
+  checkStatus();
+  getCountries().then(setCountries);
+
+}, [navigate]);
 
   if (checkingStatus) {
     return (
@@ -265,6 +262,7 @@ const handleBack = () => {
 };
 
 
+
 /* ----------------------------------------------------
    SUBMIT KYC
 ---------------------------------------------------- */
@@ -272,41 +270,17 @@ const handleBack = () => {
 const handleSubmit = async (e) => {
 
   e.preventDefault();
-
   setLoading(true);
 
   try {
 
-    const response = await completeKYC(form);
+    await completeKYC(form);
 
-    console.log("KYC SUBMIT RESPONSE:", response);
-
-    // After submitting KYC we fetch the updated status
-    const summary = await getDashboardSummary();
-
-    const status = summary?.onboarding?.kyc_status;
-
-    console.log("UPDATED KYC STATUS:", status);
-
-    if (status === "verified") {
-
-      navigate("/kyc/verified");
-
-    } else if (status === "pending") {
-
-      navigate("/kyc/pending");
-
-    } else {
-
-      // fallback if backend returns something unexpected
-      navigate("/dashboard");
-
-    }
+    alert("Your documents were submitted successfully and are under review.");
 
   } catch (err) {
 
     console.error("KYC submission failed:", err);
-
     alert(err.message || "Verification failed");
 
   } finally {

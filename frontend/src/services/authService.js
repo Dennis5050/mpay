@@ -101,25 +101,21 @@ export const login = async (email, password) => {
 | Set Transaction PIN
 |--------------------------------------------------------------------------
 */
-export const setTransactionPin = async (pin) => {
-  const response = await fetch(`${API_BASE_URL}/auth/set-pin`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ pin }),
-  });
-
-  return handleResponse(response);
-};
 
 /*
 |--------------------------------------------------------------------------
-|/*
+/*
 |--------------------------------------------------------------------------
 | Complete KYC (Multipart/FormData)
 |--------------------------------------------------------------------------
 */
 export const completeKYC = async (form) => {
+
   const token = localStorage.getItem("mpay_token");
+
+  if (!token) {
+    throw new Error("User not authenticated");
+  }
 
   const formData = new FormData();
 
@@ -138,17 +134,28 @@ export const completeKYC = async (form) => {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: "application/json",
+      Accept: "application/json"
     },
-    body: formData,
+    body: formData
   });
 
-  if (!response.ok) {
-    throw new Error("KYC submission failed");
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Invalid server response");
   }
 
-  return response.json();
+  if (!response.ok) {
+    console.error("KYC API ERROR:", data);
+    throw new Error(data.message || "KYC submission failed");
+  }
+
+  return data;
 };
+
+
 
 /*
 |--------------------------------------------------------------------------

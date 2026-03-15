@@ -47,6 +47,20 @@ export const changePassword = async (data) => {
 
   return handleResponse(response);
 };
+/*
+|--------------------------------------------------------------------------
+| Set Transaction PIN
+|--------------------------------------------------------------------------
+*/
+export const setTransactionPin = async (data) => {
+  const response = await fetch(`${API_BASE_URL}/user/set-transaction-pin`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  return handleResponse(response);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -85,4 +99,7 @@ export const getKYCStatus = async () => {
   });
 
   return handleResponse(response);
+
+
+  
 };
